@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            if (packageManager.canRequestPackageInstalls()) {
+            if (canInstallPackages()) {
                 downloadedApk?.let { launchInstaller(it) }
             } else {
                 status = "Install permission was not granted."
@@ -127,7 +127,7 @@ class MainActivity : ComponentActivity() {
                 runOnUiThread {
                     downloadedApk = apk
                     status = "Download complete. Opening Android installer…"
-                    if (packageManager.canRequestPackageInstalls()) {
+                    if (canInstallPackages()) {
                         launchInstaller(apk)
                     } else {
                         status = "Allow Purnima to install updates in Android settings."
@@ -144,6 +144,9 @@ class MainActivity : ComponentActivity() {
             }
         }.start()
     }
+
+    private fun canInstallPackages(): Boolean =
+        android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O || packageManager.canRequestPackageInstalls()
 
     private fun launchInstaller(apk: File) {
         try {
