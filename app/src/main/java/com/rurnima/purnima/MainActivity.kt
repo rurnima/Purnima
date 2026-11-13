@@ -75,13 +75,6 @@ private fun PurnimaHomeScreen() {
                 Text("YOUR AI COMPANION", color = Muted, fontSize = 9.sp, letterSpacing = 2.sp)
             }
             Spacer(Modifier.weight(1f))
-            Box(
-                modifier = Modifier
-                    .size(10.dp)
-                    .background(Color(0xFF8DFFB5), CircleShape)
-            )
-            Spacer(Modifier.width(6.dp))
-            Text("ONLINE", color = Color(0xFF8DFFB5), fontSize = 10.sp, letterSpacing = 1.sp)
         }
 
         Spacer(Modifier.height(22.dp))
