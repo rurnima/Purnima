@@ -13,9 +13,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.remember
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,8 +42,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
+                var currentScreen by remember { mutableStateOf("Home") }
                 Surface(modifier = Modifier.fillMaxSize(), color = Night) {
-                    PurnimaHomeScreen()
+                    when (currentScreen) {
+                        "Chat" -> ChatScreen(onNavigate = { destination ->
+                            currentScreen = if (destination == "Chat") "Chat" else destination
+                        })
+                        else -> PurnimaHomeScreen(onNavigate = { destination ->
+                            currentScreen = destination
+                        })
+                    }
                 }
             }
         }
@@ -52,7 +59,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun PurnimaHomeScreen() {
+private fun PurnimaHomeScreen(onNavigate: (String) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -112,9 +119,7 @@ private fun PurnimaHomeScreen() {
                     contentAlignment = Alignment.Center
                 ) {
                     OrbAnimationVideo(
-                        modifier = Modifier
-                            .size(270.dp)
-                            .align(Alignment.Center)
+                        modifier = Modifier.size(270.dp).align(Alignment.Center)
                     )
                     Image(
                         painter = painterResource(id = R.drawable.purnima_avatar),
@@ -130,17 +135,14 @@ private fun PurnimaHomeScreen() {
                 Spacer(Modifier.height(28.dp))
                 Text("Hello, I'm Purnima", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(8.dp))
-                Text(
-                    "I'm here whenever you need me",
-                    color = Muted,
-                    fontSize = 13.sp
-                )
+                Text("I'm here whenever you need me", color = Muted, fontSize = 13.sp)
                 Spacer(Modifier.height(30.dp))
-                Box(
+                TextButton(
+                    onClick = { onNavigate("Chat") },
                     modifier = Modifier
                         .border(1.dp, Color(0xFF6E42A0), RoundedCornerShape(50.dp))
                         .background(Color(0x221B0F30), RoundedCornerShape(50.dp))
-                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                        .padding(horizontal = 12.dp, vertical = 2.dp)
                 ) {
                     Text("✦  TAP TO START A CONVERSATION", color = Color(0xFFD7BFFF), fontSize = 10.sp, letterSpacing = 1.sp)
                 }
@@ -158,11 +160,11 @@ private fun PurnimaHomeScreen() {
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            BottomNavItem("⌂", "Home", true)
-            BottomNavItem("◌", "Chat", false)
-            BottomNavItem("◎", "Voice", false)
-            BottomNavItem("◷", "History", false)
-            BottomNavItem("⚙", "Settings", false)
+            BottomNavItem("⌂", "Home", true) { onNavigate("Home") }
+            BottomNavItem("◌", "Chat", false) { onNavigate("Chat") }
+            BottomNavItem("◎", "Voice", false) { onNavigate("Voice") }
+            BottomNavItem("◷", "History", false) { onNavigate("History") }
+            BottomNavItem("⚙", "Settings", false) { onNavigate("Settings") }
         }
     }
 }
@@ -199,20 +201,27 @@ private fun OrbAnimationVideo(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun BottomNavItem(symbol: String, label: String, selected: Boolean) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            symbol,
-            color = if (selected) Color(0xFFC69AFF) else Muted,
-            fontSize = 22.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            label,
-            color = if (selected) Color(0xFFC69AFF) else Muted,
-            fontSize = 10.sp,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
-        )
+private fun BottomNavItem(
+    symbol: String,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    TextButton(onClick = onClick, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                symbol,
+                color = if (selected) Color(0xFFC69AFF) else Muted,
+                fontSize = 22.sp,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                label,
+                color = if (selected) Color(0xFFC69AFF) else Muted,
+                fontSize = 10.sp,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+            )
+        }
     }
 }
