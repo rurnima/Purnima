@@ -1,8 +1,10 @@
 package com.rurnima.purnima
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -12,14 +14,24 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 
 private val Night = Color(0xFF080610)
 private val Violet = Color(0xFF9B5CFF)
@@ -94,22 +106,26 @@ private fun PurnimaHomeScreen() {
                 ),
             contentAlignment = Alignment.Center
         ) {
-            // Avatar image and orb animation will be wired to the supplied assets.
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
-                    modifier = Modifier
-                        .size(150.dp)
-                        .shadow(24.dp, CircleShape, ambientColor = Violet, spotColor = Violet)
-                        .background(
-                            Brush.radialGradient(
-                                colors = listOf(Color(0xFFB88BFF), Color(0xFF7137C9), Color(0xFF180D2B))
-                            ),
-                            CircleShape
-                        )
-                        .border(1.dp, Color(0xFFB98BFF), CircleShape),
+                    modifier = Modifier.size(270.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("✧", color = Color.White, fontSize = 74.sp)
+                    OrbAnimationVideo(
+                        modifier = Modifier
+                            .size(270.dp)
+                            .align(Alignment.Center)
+                    )
+                    Image(
+                        painter = painterResource(id = R.drawable.purnima_avatar),
+                        contentDescription = "Purnima avatar",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(204.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, Color(0xFFB98BFF), CircleShape)
+                            .shadow(18.dp, CircleShape, ambientColor = Violet, spotColor = Violet)
+                    )
                 }
                 Spacer(Modifier.height(28.dp))
                 Text("Hello, I'm Purnima", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
@@ -149,6 +165,37 @@ private fun PurnimaHomeScreen() {
             BottomNavItem("⚙", "Settings", false)
         }
     }
+}
+
+@Composable
+private fun OrbAnimationVideo(modifier: Modifier = Modifier) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val player = remember(context) {
+        ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(Uri.parse("asset:///purnima_orb_transparent.webm")))
+            repeatMode = Player.REPEAT_MODE_ONE
+            playWhenReady = true
+            prepare()
+        }
+    }
+
+    DisposableEffect(player) {
+        onDispose { player.release() }
+    }
+
+    AndroidView(
+        modifier = modifier,
+        factory = { viewContext ->
+            PlayerView(viewContext).apply {
+                useController = false
+                setUseTextureView(true)
+                setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                this.player = player
+            }
+        },
+        update = { it.player = player }
+    )
 }
 
 @Composable
