@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import worker from "../src/index";
 
 const env = {
-  DB: {} as D1Database,
+  DB: {} as never,
   AUTH_PRIVATE_KEY_PKCS8: "not-used",
   AUTH_PUBLIC_JWK: JSON.stringify({ kty: "RSA", n: "AQ", e: "AQAB" }),
   AUTH_KEY_ID: "test-key",
