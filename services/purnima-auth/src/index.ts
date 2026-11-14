@@ -58,6 +58,7 @@ async function createChallenge(request: Request, env: Env): Promise<Response> {
   if (!device) return json({ error: "Unknown device" }, 404);
   const nonce = base64Url(crypto.getRandomValues(new Uint8Array(32)));
   const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare("DELETE FROM challenges WHERE expires_at <= ?").bind(now).run();
   await env.DB.prepare("INSERT INTO challenges (device_id, nonce, expires_at) VALUES (?, ?, ?)")
     .bind(body.deviceId, nonce, now + CHALLENGE_TTL_SECONDS).run();
   return json({ challenge: nonce, expiresAt: now + CHALLENGE_TTL_SECONDS });
