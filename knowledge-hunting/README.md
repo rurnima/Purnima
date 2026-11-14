@@ -19,25 +19,30 @@ Discover public GitHub tools and research sources for knowledge/deep research, w
 | [arXiv](https://arxiv.org/) | Public research metadata/API; content remains subject to paper rights | Preprint discovery | API-based provider |
 | [Wikipedia](https://www.wikipedia.org/) | Content under applicable CC licenses; API available | General knowledge lookup | API-based provider |
 
-## Proposed request flow
+## Implemented API
 
-1. Android Hunt UI sends a query to the dedicated Knowledge API.
-2. Cloudflare Worker routes requests to GitHub public repository search and the configured research providers.
-3. Return normalized results with title, source, URL, summary/snippet, and provider metadata.
-4. Android displays results and opens the source URL in a browser; no provider credentials are embedded in the APK.
-5. Keep provider adapters independently testable and preserve source attribution/license metadata.
+Cloudflare Worker: `purnima-knowledge-hunting`
 
-## API surface (planned)
+- `POST /api/knowledge/search` — research search with provider fallback. Request JSON: `{"query":"...","limit":5}`.
+- `POST /api/knowledge/github-tools` — GitHub public repository search returning stars, forks, language, license, update/push dates, topics, archived/fork status, and open issues.
+- `GET /health` — health response.
+- IP rate limiting: 30 requests/minute per address through the Durable Object binding.
+- Search fallback providers include Wikipedia, Crossref, OpenAlex and arXiv; SearXNG is optional and must be configured with an owner-controlled HTTPS instance. Optional upstream WebSearchFree and Firecrawl credentials are Worker bindings; none are embedded in Android.
+- Worker source and deployed version were checked in Cloudflare. The external workers.dev health request could not be confirmed from this environment, so live endpoint reachability remains an open verification item.
 
-- `GET /api/knowledge/search?q=...` — research/web search with provider fallback.
-- `GET /api/knowledge/github-tools?q=...` — search public GitHub repositories/tools and return repository metadata (stars, forks, language, license, updated/pushed dates, topics, archive/fork status, and open issues).
+## Android UI
+
+- `app/src/main/java/com/rurnima/purnima/knowledge/KnowledgeHuntingScreen.kt` — isolated Jetpack Compose screen with Research/GitHub Tools modes, query field, loading/error/empty states, normalized result cards and source-open callback.
+- Screen has intentionally not been wired into `MainActivity`; integration needs the app baseline and INTERNET permission in the app manifest. Keep this feature separate until its PR is reviewed.
 
 ## Implementation checklist
 
 - [x] Dedicated feature branch checked against existing branches and open PRs (no duplicate found).
 - [x] Initial scope and provider inventory documented.
-- [ ] Implement/verify Worker provider adapters and consistent response schema.
-- [ ] Implement Android Hunt screen and search/results states on this isolated branch.
+- [x] Worker API routes/provider fallback implementation inspected.
+- [x] Isolated Android Hunt screen source added.
+- [ ] Verify Worker endpoint from a reachable client and test rate-limit/error paths.
+- [ ] Wire screen into app navigation only after app-project baseline is available; add INTERNET permission.
 - [ ] Add tests for query validation, provider failures, normalization, and license metadata.
-- [ ] Run Android build/tests and verify UI; report any runtime/network limitation.
-- [ ] Open/update one draft PR; do not merge without approval.
+- [ ] Run Android build/tests and inspect UI; this feature branch is currently based on the repository Main snapshot, which does not yet contain the Android Gradle project.
+- [ ] Keep one draft PR #6 updated; do not merge without approval.
