@@ -10,6 +10,13 @@ This service is the isolated retrieval capability for Purnima. It does not add a
 - Authentication is delegated to a private `AUTH` Worker service binding. The client cannot choose its own tenant/user ID.
 - Chunking is bounded; ingestion reports accepted indexing work and callers must allow for Vectorize's eventual query visibility.
 
+## Development resources provisioned
+
+- Vectorize index: `purnima-knowledge-access-dev`
+- Index configuration: 1024 dimensions, cosine distance.
+- Metadata filter index: `userId` (string), verified present.
+- Workers AI model `@cf/baai/bge-m3` was called successfully with Bengali text and returned shape `[1, 1024]`.
+
 ## Bindings required before deployment
 
 Configure these bindings in the environment-specific Worker config:
