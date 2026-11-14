@@ -77,7 +77,7 @@ async function authenticate(request: Request, env: Env): Promise<AuthenticatedUs
     if (typeof claims.sub !== "string" || !claims.sub.trim()) return null;
 
     const jwksResponse = await fetch(`${AUTH_ISSUER}/.well-known/jwks.json`, {
-      headers: { accept: "application/json", "user-agent": "Purnima-Knowledge-Access/0.1" },
+      headers: { accept: "application/json", "user-agent": "Purnima-Knowledge-Access/0.1 (+https://github.com/rurnima/Purnima)" },
     });
     if (!jwksResponse.ok) return null;
     const jwks = await jwksResponse.json() as { keys?: Array<JsonWebKey & { kid?: string; alg?: string; use?: string }> };
