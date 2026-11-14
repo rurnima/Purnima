@@ -20,8 +20,9 @@ labels, buttons, or status.
 - **Cloudflare Agents SDK MCP Client** — https://developers.cloudflare.com/agents/model-context-protocol/apis/client-api/
   - Official SDK documentation describes connecting to external MCP servers, OAuth
     authorization flow, and exposing discovered tools to the AI SDK model.
-  - Candidate for the separately hosted orchestration backend. Requires a secured app-user
-    session and deployment configuration before any mobile client can call it.
+  - Candidate for the separately hosted orchestration backend. The mobile client must not
+    require user login or manual token entry. Any server-side integration credentials must
+    remain in protected backend configuration; public endpoint abuse controls are mandatory.
 - **Cloudflare Agents self-modifying harness** — https://github.com/cloudflare/agents/tree/main/examples/next/harnesses/self-modifying
   - Architecture reference for editable tools, candidate revisions, validation, and activation.
   - The example is experimental and must not be copied or exposed as-is.
