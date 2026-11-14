@@ -38,10 +38,11 @@ function makeEnv(userId = "user-123") {
   const query = vi.fn(async (_vector: number[], _options: unknown) => ({
     matches: [{ id: "chunk-1", score: 0.91, metadata: { userId, content: "নমুনা তথ্য" } }],
   }));
+  const authFetch = vi.fn(async () => Response.json({ keys: [publicJwk] }));
   const env = {
     AI: { run: aiRun },
     VECTORIZE: { upsert, deleteByIds, query },
-
+    AUTH: { fetch: authFetch },
   } as unknown as Env;
   return { env, aiRun, upsert, deleteByIds, query, authFetch };
 }
