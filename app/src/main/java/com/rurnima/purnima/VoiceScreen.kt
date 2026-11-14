@@ -70,13 +70,6 @@ fun VoiceScreen(onNavigate: (String) -> Unit = {}) {
         }
     }
 
-    LaunchedEffect(pendingPermissionConnect) {
-        if (pendingPermissionConnect) {
-            pendingPermissionConnect = false
-            connectToPurnima()
-        }
-    }
-
     DisposableEffect(Unit) {
         onDispose {
             eventJob?.cancel()
@@ -164,6 +157,13 @@ fun VoiceScreen(onNavigate: (String) -> Unit = {}) {
                 status = "Couldn't connect"
                 errorMessage = error.message?.take(180) ?: "Check your LiveKit token endpoint and agent deployment."
             }
+        }
+    }
+
+    LaunchedEffect(pendingPermissionConnect) {
+        if (pendingPermissionConnect) {
+            pendingPermissionConnect = false
+            connectToPurnima()
         }
     }
 
