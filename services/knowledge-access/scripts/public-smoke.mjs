@@ -39,7 +39,7 @@ const uniqueText = `Purnima knowledge integration verification ${randomUUID()}. 
 const ingested = await post(KNOWLEDGE_URL, "/v1/knowledge/ingest", {
   documentId, title: "CI integration verification", text: uniqueText,
 }, );
-if (ingested.status !== 202 || ingested.data.status !== "indexed") throw new Error("Authenticated knowledge ingestion failed");
+if (ingested.status !== 202 || ingested.data.status !== "indexed") throw new Error(`Authenticated knowledge ingestion failed: HTTP ${ingested.status} ${JSON.stringify(ingested.data)}`);
 
 let found = false;
 for (let attempt = 0; attempt < 10; attempt += 1) {
