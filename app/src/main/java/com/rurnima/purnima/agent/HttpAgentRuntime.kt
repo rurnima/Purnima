@@ -74,15 +74,35 @@ class HttpAgentRuntime(
         return try {
             val json = JSONObject(responseText)
             val toolResults = json.optJSONArray("toolResults") ?: JSONArray()
+            val plan = json.optJSONArray("plan") ?: JSONArray()
             AgentRunResult(
                 summary = json.optString("summary", "The agent received the request."),
                 toolResults = toolResults.toToolResults(),
-                awaitingUserApproval = json.optBoolean("awaitingUserApproval", false)
+                awaitingUserApproval = json.optBoolean("awaitingUserApproval", false),
+                plan = plan.toPlanSteps(),
+                executionEnabled = json.optBoolean("executionEnabled", false),
+                executionStatus = json.optString("executionStatus", "unknown")
             )
         } catch (_: Exception) {
             AgentRunResult("The agent service returned an invalid response.")
         }
     }
+
+    private fun JSONArray.toPlanSteps(): List<AgentPlanStep> =
+        (0 until length()).mapNotNull { index ->
+            optJSONObject(index)?.let { item ->
+                AgentPlanStep(
+                    tool = item.optString("tool", "unknown"),
+                    permission = item.optString("permission").toAgentPermissionOrNull(),
+                    description = item.optString("description", "No description provided."),
+                    requiresApproval = item.optBoolean("requiresApproval", true),
+                    executionStatus = item.optString("executionStatus", "unknown")
+                )
+            }
+        }
+
+    private fun String.toAgentPermissionOrNull(): AgentPermission? =
+        runCatching { AgentPermission.valueOf(this) }.getOrNull()
 
     private fun JSONArray.toToolResults(): List<AgentToolResult> =
         (0 until length()).mapNotNull { index ->
