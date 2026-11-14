@@ -28,6 +28,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -39,7 +42,7 @@ private val ChatMuted = Color(0xFFBDB0D2)
 @Composable
 fun ChatScreen(modifier: Modifier = Modifier, onNavigate: (String) -> Unit = {}) {
     val messages = remember {
-        mutableStateListOf(ChatMessage("Hello! 💕\nI'm always here for you.\nWhat do you want to know?", false, "9:41 PM"))
+        mutableStateListOf(ChatMessage("Hello! 💕\nআমি Purnima। তোমার কথা শুনতে প্রস্তুত।\nAI সার্ভার সংযুক্ত হলে আমি কথোপকথনের উত্তর দিতে পারব।", false, SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())))
     }
     var draft by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -51,7 +54,15 @@ fun ChatScreen(modifier: Modifier = Modifier, onNavigate: (String) -> Unit = {})
     fun sendMessage() {
         val text = draft.trim()
         if (text.isNotEmpty()) {
-            messages.add(ChatMessage(text, true, "9:42 PM"))
+            val timestamp = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())
+            messages.add(ChatMessage(text, true, timestamp))
+            messages.add(
+                ChatMessage(
+                    "তোমার মেসেজটি পেয়েছি। 💜 তবে AI সার্ভার এখনো সংযুক্ত করা হয়নি, তাই এই মুহূর্তে আমি উত্তর তৈরি করতে পারছি না।",
+                    false,
+                    timestamp
+                )
+            )
             draft = ""
         }
     }
