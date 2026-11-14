@@ -10,11 +10,18 @@ This is **not** a standalone Self-update screen. Agent entry points belong insid
 existing Chat and Voice experiences. The Home screen must not display agent controls,
 labels, buttons, or status.
 
-## Public tool foundation
+## Public tool foundation and backend candidate
 
 - **GitHub MCP Server** — https://github.com/github/github-mcp-server
   - Public, official GitHub MCP server for repository operations.
-  - Use as an integration reference / backend tool server; it is not an Android library.
+  - Its remote server supports OAuth and read-only toolset paths; start with read-only
+    repository tools before enabling branch writes or pull-request creation.
+  - This is an MCP service, not an Android library.
+- **Cloudflare Agents SDK MCP Client** — https://developers.cloudflare.com/agents/model-context-protocol/apis/client-api/
+  - Official SDK documentation describes connecting to external MCP servers, OAuth
+    authorization flow, and exposing discovered tools to the AI SDK model.
+  - Candidate for the separately hosted orchestration backend. Requires a secured app-user
+    session and deployment configuration before any mobile client can call it.
 - **Cloudflare Agents self-modifying harness** — https://github.com/cloudflare/agents/tree/main/examples/next/harnesses/self-modifying
   - Architecture reference for editable tools, candidate revisions, validation, and activation.
   - The example is experimental and must not be copied or exposed as-is.
@@ -28,8 +35,8 @@ labels, buttons, or status.
 2. **Authenticated orchestration service** — model reasoning, planning, and tool selection
    run behind a service boundary. API keys and GitHub tokens must never be shipped in the APK.
 3. **Allow-listed tool registry** — each tool declares an input contract and required permission.
-4. **GitHub tool adapter** — scoped repository reads, feature branch creation, commits, CI
-   inspection, and pull-request creation. Do not operate on unrelated branches/tasks.
+4. **GitHub MCP integration** — scoped repository reads, feature branch creation, commits, CI
+   inspection, and pull-request creation. Begin read-only; gate write tools separately.
 5. **Build/test executor** — run candidate builds and tests in an isolated environment, not
    by running arbitrary downloaded code on the Android device.
 6. **Approval gate** — require explicit user approval before release publication, production
@@ -55,15 +62,22 @@ app/src/main/java/com/rurnima/purnima/agent/AgentContracts.kt establishes the in
 UI-independent Kotlin contracts for Chat/Voice instructions, tool requests/results, the
 agent runtime, tool execution, and approval gate.
 
-This checkpoint does **not** yet connect a model endpoint, GitHub MCP server, Chat screen,
-Voice screen, or build executor. Those integrations require an authenticated service endpoint
-and separate implementation/testing steps.
+app/src/main/java/com/rurnima/purnima/agent/HttpAgentRuntime.kt is an HTTPS-only client
+adapter that accepts an injected endpoint and access-token provider. It implements the
+defined request/response envelope, but it cannot function until the orchestration backend
+and secure login/session provider are implemented and configured.
+
+The Android agent is not yet connected to a model endpoint, GitHub MCP server, Chat screen,
+Voice screen, or build executor.
 
 ## Implementation sequence
 
 - [x] Establish the Chat/Voice-neutral agent contract and architecture boundaries.
-- [ ] Choose and configure the authenticated orchestration backend.
-- [ ] Implement a minimal allow-listed read-only GitHub tool path.
+- [x] Add the injected HTTPS runtime client adapter and network permission.
+- [x] Add a dedicated Android debug-build workflow.
+- [x] Research public GitHub MCP OAuth and Cloudflare Agents MCP client options.
+- [ ] Implement and secure the orchestration backend/session authentication.
+- [ ] Connect a minimal allow-listed read-only GitHub MCP tool path.
 - [ ] Add proposal/approval flow for branch writes and pull-request creation.
 - [ ] Wire Chat adapter without changing the Home screen.
 - [ ] Wire Voice adapter without changing the Home screen.
