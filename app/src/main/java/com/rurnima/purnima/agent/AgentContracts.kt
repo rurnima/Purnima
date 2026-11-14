@@ -36,10 +36,21 @@ data class AgentToolResult(
     val details: String? = null
 )
 
+data class AgentPlanStep(
+    val tool: String,
+    val permission: AgentPermission?,
+    val description: String,
+    val requiresApproval: Boolean,
+    val executionStatus: String
+)
+
 data class AgentRunResult(
     val summary: String,
     val toolResults: List<AgentToolResult> = emptyList(),
-    val awaitingUserApproval: Boolean = false
+    val awaitingUserApproval: Boolean = false,
+    val plan: List<AgentPlanStep> = emptyList(),
+    val executionEnabled: Boolean = false,
+    val executionStatus: String = "unknown"
 )
 
 /**
