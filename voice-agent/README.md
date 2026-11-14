@@ -14,7 +14,7 @@ credentials or put the LiveKit API secret in the Android app.
 - `GNANI_API_KEY`: Gnani Vachana key for Bengali speech services.
 
 Optional:
-- `GNANI_TTS_VOICE`: Gnani timbre-v2.5 voice name (default: `Kaveri`).
+- `GNANI_TTS_VOICE`: Gnani timbre-v2.5 voice name (default: `Nalini`).
 - `PURNIMA_LLM_MODEL`: LiveKit Inference model (default: `google/gemma-4-31b-it`).
 
 ## Run locally
