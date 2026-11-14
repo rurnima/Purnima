@@ -31,3 +31,5 @@ jobs:
         run: npm run typecheck
       - name: Unit tests
         run: npm test
+      - name: Public authenticated Vectorize E2E
+        run: node scripts/public-smoke.mjs
