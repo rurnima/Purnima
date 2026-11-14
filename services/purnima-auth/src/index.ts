@@ -1,16 +1,15 @@
 interface D1Statement { bind(...values: unknown[]): D1Statement; run(): Promise<unknown>; first<T>(): Promise<T | null>; }
 interface D1Database { prepare(query: string): D1Statement; }
 
-export interface Env {
-  DB: D1Database;
-  AUTH_SIGNING_KEY: CryptoKey;
-  AUTH_PUBLIC_JWK: string;
-  AUTH_KEY_ID: string;
-}
-interface DeviceRow { id: string; public_key: string; created_at: number; }
+export interface Env { DB: D1Database; }
+interface DeviceRow { id: string; public_key: string; }
+interface SigningRow { private_key_pkcs8: string; public_jwk: string; key_id: string; }
+
 const TOKEN_TTL_SECONDS = 900;
 const CHALLENGE_TTL_SECONDS = 300;
 const AUDIENCE = "purnima-api";
+const KEY_ID = "purnima-auth-rs256-v1";
+
 function json(data: unknown, status = 200): Response {
   return Response.json(data, { status, headers: { "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" } });
 }
@@ -28,12 +27,42 @@ function base64Url(value: Uint8Array): string {
   return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 function encodeJson(value: unknown): string { return base64Url(new TextEncoder().encode(JSON.stringify(value))); }
+
+async function getSigningMaterial(env: Env): Promise<{ privateKey: CryptoKey; publicJwk: JsonWebKey; keyId: string }> {
+  let row = await env.DB.prepare("SELECT private_key_pkcs8, public_jwk, key_id FROM auth_keys WHERE id = 1")
+    .first<SigningRow>();
+  if (!row) {
+    const pair = await crypto.subtle.generateKey(
+      { name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" },
+      true,
+      ["sign", "verify"],
+    );
+    const pkcs8 = new Uint8Array(await crypto.subtle.exportKey("pkcs8", pair.privateKey));
+    const publicJwk = await crypto.subtle.exportKey("jwk", pair.publicKey);
+    await env.DB.prepare(
+      "INSERT OR IGNORE INTO auth_keys (id, private_key_pkcs8, public_jwk, key_id, created_at) VALUES (1, ?, ?, ?, ?)",
+    ).bind(base64Url(pkcs8), JSON.stringify(publicJwk), KEY_ID, Math.floor(Date.now() / 1000)).run();
+    row = await env.DB.prepare("SELECT private_key_pkcs8, public_jwk, key_id FROM auth_keys WHERE id = 1")
+      .first<SigningRow>();
+  }
+  if (!row) throw new Error("Authentication signing key is unavailable");
+  const privateKey = await crypto.subtle.importKey(
+    "pkcs8",
+    decodeBase64Url(row.private_key_pkcs8),
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  return { privateKey, publicJwk: JSON.parse(row.public_jwk) as JsonWebKey, keyId: row.key_id };
+}
+
 async function issueToken(deviceId: string, issuer: string, env: Env): Promise<string> {
+  const signing = await getSigningMaterial(env);
   const now = Math.floor(Date.now() / 1000);
-  const header = encodeJson({ alg: "RS256", typ: "JWT", kid: env.AUTH_KEY_ID });
+  const header = encodeJson({ alg: "RS256", typ: "JWT", kid: signing.keyId });
   const payload = encodeJson({ iss: issuer, aud: AUDIENCE, sub: deviceId, iat: now, exp: now + TOKEN_TTL_SECONDS });
   const unsigned = header + "." + payload;
-  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", env.AUTH_SIGNING_KEY, new TextEncoder().encode(unsigned));
+  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", signing.privateKey, new TextEncoder().encode(unsigned));
   return unsigned + "." + base64Url(new Uint8Array(signature));
 }
 async function register(request: Request, env: Env): Promise<Response> {
@@ -100,8 +129,8 @@ export default {
     try {
       if (request.method === "GET" && url.pathname === "/health") return json({ service: "purnima-auth", status: "ok" });
       if (request.method === "GET" && url.pathname === "/.well-known/jwks.json") {
-        const publicKey = JSON.parse(env.AUTH_PUBLIC_JWK) as JsonWebKey;
-        return json({ keys: [{ ...publicKey, kid: env.AUTH_KEY_ID, alg: "RS256", use: "sig" }] });
+        const signing = await getSigningMaterial(env);
+        return json({ keys: [{ ...signing.publicJwk, kid: signing.keyId, alg: "RS256", use: "sig" }] });
       }
       if (request.method === "POST" && url.pathname === "/v1/device/register") return await register(request, env);
       if (request.method === "POST" && url.pathname === "/v1/device/challenge") return await createChallenge(request, env);
