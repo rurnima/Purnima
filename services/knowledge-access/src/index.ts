@@ -12,7 +12,6 @@ export interface Env {
       options: { topK: number; filter: Record<string, string>; returnMetadata: "all" },
     ): Promise<{ matches?: Array<{ id: string; score?: number; metadata?: unknown }> }>;
   };
-  AUTH: { fetch(request: Request): Promise<Response> };
 }
 
 interface AuthenticatedUser {
@@ -70,24 +69,21 @@ async function authenticate(request: Request, env: Env): Promise<AuthenticatedUs
     const header = decodeJsonSegment(parts[0]);
     const claims = decodeJsonSegment(parts[1]);
     if (header.alg !== "RS256" || typeof header.kid !== "string") return null;
-    if (claims.iss !== AUTH_ISSUER) { console.log("PURNIMA_AUTH_DIAG_ISSUER_MISMATCH"); return null; }
-    if (!audienceMatches(claims.aud, AUTH_AUDIENCE)) { console.log("PURNIMA_AUTH_DIAG_AUDIENCE_MISMATCH"); return null; }
+    if (claims.iss !== AUTH_ISSUER || !audienceMatches(claims.aud, AUTH_AUDIENCE)) return null;
 
     const now = Math.floor(Date.now() / 1_000);
     if (typeof claims.exp !== "number" || claims.exp <= now) return null;
     if (typeof claims.nbf === "number" && claims.nbf > now) return null;
     if (typeof claims.sub !== "string" || !claims.sub.trim()) return null;
 
-    const jwksResponse = await env.AUTH.fetch(new Request(`${AUTH_ISSUER}/.well-known/jwks.json`, {
+    const jwksResponse = await fetch(`${AUTH_ISSUER}/.well-known/jwks.json`, {
       headers: { accept: "application/json", "user-agent": "Purnima-Knowledge-Access/0.1" },
-    }));
-    console.log("PURNIMA_AUTH_DIAG_JWKS_STATUS", jwksResponse.status);
+    });
     if (!jwksResponse.ok) return null;
     const jwks = await jwksResponse.json() as { keys?: Array<JsonWebKey & { kid?: string; alg?: string; use?: string }> };
     const jwk = jwks.keys?.find((key) =>
       key.kid === header.kid && (!key.alg || key.alg === "RS256") && (!key.use || key.use === "sig")
     );
-    console.log("PURNIMA_AUTH_DIAG_JWK_FOUND", Boolean(jwk));
     if (!jwk) return null;
 
     const publicKey = await crypto.subtle.importKey(
@@ -103,7 +99,6 @@ async function authenticate(request: Request, env: Env): Promise<AuthenticatedUs
       decodeBase64Url(parts[2]),
       new TextEncoder().encode(parts.slice(0, 2).join(".")),
     );
-    console.log("PURNIMA_AUTH_DIAG_SIGNATURE_VALID", valid);
     return valid ? { id: claims.sub } : null;
   } catch {
     return null;
