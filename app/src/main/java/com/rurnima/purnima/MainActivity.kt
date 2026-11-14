@@ -45,12 +45,9 @@ class MainActivity : ComponentActivity() {
                 var currentScreen by remember { mutableStateOf("Home") }
                 Surface(modifier = Modifier.fillMaxSize(), color = Night) {
                     when (currentScreen) {
-                        "Chat" -> ChatScreen(onNavigate = { destination ->
-                            currentScreen = if (destination == "Chat") "Chat" else destination
-                        })
-                        else -> PurnimaHomeScreen(onNavigate = { destination ->
-                            currentScreen = destination
-                        })
+                        "Chat" -> ChatScreen(onNavigate = { destination -> currentScreen = destination })
+                        "Voice" -> VoiceScreen(onNavigate = { destination -> currentScreen = destination })
+                        else -> PurnimaHomeScreen(onNavigate = { destination -> currentScreen = destination })
                     }
                 }
             }
@@ -118,9 +115,7 @@ private fun PurnimaHomeScreen(onNavigate: (String) -> Unit) {
                     modifier = Modifier.size(270.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    OrbAnimationVideo(
-                        modifier = Modifier.size(270.dp).align(Alignment.Center)
-                    )
+                    OrbAnimationVideo(modifier = Modifier.size(270.dp).align(Alignment.Center))
                     Image(
                         painter = painterResource(id = R.drawable.purnima_avatar),
                         contentDescription = "Purnima avatar",
@@ -150,7 +145,6 @@ private fun PurnimaHomeScreen(onNavigate: (String) -> Unit) {
         }
 
         Spacer(Modifier.height(16.dp))
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -180,17 +174,11 @@ private fun OrbAnimationVideo(modifier: Modifier = Modifier) {
             prepare()
         }
     }
-
-    DisposableEffect(player) {
-        onDispose { player.release() }
-    }
-
+    DisposableEffect(player) { onDispose { player.release() } }
     var textureView by remember { mutableStateOf<TextureView?>(null) }
-
     DisposableEffect(player, textureView) {
         onDispose { textureView?.let(player::clearVideoTextureView) }
     }
-
     AndroidView(
         modifier = modifier,
         factory = { viewContext ->
@@ -219,19 +207,11 @@ private fun BottomNavItem(
 ) {
     TextButton(onClick = onClick, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                symbol,
-                color = if (selected) Color(0xFFC69AFF) else Muted,
-                fontSize = 22.sp,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-            )
+            Text(symbol, color = if (selected) Color(0xFFC69AFF) else Muted,
+                fontSize = 22.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
             Spacer(Modifier.height(4.dp))
-            Text(
-                label,
-                color = if (selected) Color(0xFFC69AFF) else Muted,
-                fontSize = 10.sp,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
-            )
+            Text(label, color = if (selected) Color(0xFFC69AFF) else Muted,
+                fontSize = 10.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
         }
     }
 }
