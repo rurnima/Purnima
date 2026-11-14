@@ -33,6 +33,15 @@ jobs:
         run: npm run typecheck
       - name: Unit tests
         run: npm test
+      - name: Public Worker smoke test
+        env:
+          AUTH_BASE_URL: https://purnima-auth.purnima.workers.dev
+        run: |
+          set -euo pipefail
+          health="$(curl --fail --silent --show-error "$AUTH_BASE_URL/health")"
+          echo "$health" | jq -e '.service == "purnima-auth" and .status == "ok"'
+          jwks="$(curl --fail --silent --show-error "$AUTH_BASE_URL/.well-known/jwks.json")"
+          echo "$jwks" | jq -e '.keys | length == 1 and .[0].kty == "RSA" and .[0].alg == "RS256" and .[0].kid == "purnima-auth-rs256-v1"'
 
   android-build:
     name: Android debug build
