@@ -7,12 +7,6 @@ on:
     paths:
       - "services/knowledge-access/**"
       - ".github/workflows/knowledge-access.yml"
-  push:
-    branches:
-      - feature/knowledge-access
-    paths:
-      - "services/knowledge-access/**"
-      - ".github/workflows/knowledge-access.yml"
 
 permissions:
   contents: read
