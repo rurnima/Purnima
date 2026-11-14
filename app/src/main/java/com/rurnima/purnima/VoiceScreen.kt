@@ -33,12 +33,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import io.livekit.android.LiveKit
-import io.livekit.android.events.RoomEvent
 import io.livekit.android.room.Room
 import io.livekit.android.token.TokenRequestOptions
 import io.livekit.android.token.TokenSource
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -52,7 +49,6 @@ fun VoiceScreen(onNavigate: (String) -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var liveRoom by remember { mutableStateOf<Room?>(null) }
-    var eventJob by remember { mutableStateOf<Job?>(null) }
     var connecting by remember { mutableStateOf(false) }
     var connected by remember { mutableStateOf(false) }
     var microphoneEnabled by remember { mutableStateOf(false) }
@@ -73,7 +69,6 @@ fun VoiceScreen(onNavigate: (String) -> Unit = {}) {
 
     DisposableEffect(Unit) {
         onDispose {
-            eventJob?.cancel()
             liveRoom?.disconnect()
         }
     }
@@ -120,27 +115,6 @@ fun VoiceScreen(onNavigate: (String) -> Unit = {}) {
 
                 val room = LiveKit.create(appContext = context.applicationContext)
                 liveRoom = room
-                eventJob = room.events.onEach { event ->
-                    when (event) {
-                        is RoomEvent.Connected -> {
-                            connected = true
-                            connecting = false
-                            status = "Connected — Purnima is ready"
-                        }
-                        is RoomEvent.Reconnecting -> status = "Reconnecting…"
-                        is RoomEvent.Reconnected -> status = "Connection restored"
-                        is RoomEvent.ParticipantConnected -> {
-                            if (connected) status = "Purnima joined — you can talk now"
-                        }
-                        is RoomEvent.Disconnected -> {
-                            connected = false
-                            connecting = false
-                            microphoneEnabled = false
-                            status = "Call ended"
-                        }
-                        else -> Unit
-                    }
-                }.launchIn(scope)
                 room.connect(credentials.serverUrl, credentials.participantToken)
                 room.localParticipant.setMicrophoneEnabled(true)
                 microphoneEnabled = true
@@ -185,8 +159,6 @@ fun VoiceScreen(onNavigate: (String) -> Unit = {}) {
     }
 
     fun endCall() {
-        eventJob?.cancel()
-        eventJob = null
         liveRoom?.disconnect()
         liveRoom = null
         connecting = false
