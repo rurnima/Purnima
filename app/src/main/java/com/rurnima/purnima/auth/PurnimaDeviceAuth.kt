@@ -15,7 +15,7 @@ import java.security.KeyStore
 import java.security.Signature
 import java.security.interfaces.ECPublicKey
 import java.security.spec.ECGenParameterSpec
-import java.util.Base64
+import android.util.Base64
 
 /**
  * Silent per-installation auth. The private key never leaves Android Keystore,
@@ -113,7 +113,7 @@ class PurnimaDeviceAuth(
         if (size > 1 && this[0] == 0.toByte()) copyOfRange(1, size) else this
 
     private fun base64Url(bytes: ByteArray): String =
-        Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
+        Base64.encodeToString(bytes, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
 
     private fun post(path: String, body: JSONObject): JSONObject {
         val connection = URL(baseUrl.trimEnd('/') + path).openConnection() as HttpURLConnection
