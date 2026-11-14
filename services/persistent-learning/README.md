@@ -20,7 +20,9 @@ This isolated service stores user-approved facts and preferences that Purnima ma
 
 ## D1 migration
 
-Apply `migrations/0001_create_memory_items.sql` to a dedicated Persistent Learning D1 database. Do not reuse the Knowledge Hunting D1/DO resources or the AI Agent Runtime storage.
+Dedicated development database provisioned: `purnima-persistent-learning-dev` (ID: `01739224-9e13-4ab1-9a3a-f016f5204f52`, primary region APAC).
+
+Migration `migrations/0001_create_memory_items.sql` was applied through the D1 API. The `memory_items`, `memory_events`, and their two indexes were verified in `sqlite_master`. Do not reuse the Knowledge Hunting D1/DO resources or the AI Agent Runtime storage.
 
 ## API contract to implement
 
@@ -36,7 +38,7 @@ All mutations must constrain by both `id` and authenticated `user_id`; use param
 - Provision a dedicated D1 database and bind it as `DB`.
 - Configure the trusted private `AUTH` service binding.
 - Add Worker implementation and tests for consent, tenant isolation, update, archive, and deletion before app integration.
-- No production data migration or Cloudflare resource creation is performed by this PR.
+- Only the dedicated development D1 database is provisioned; no production user data was migrated.
 
 ## Official references
 
