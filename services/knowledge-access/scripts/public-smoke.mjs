@@ -31,7 +31,6 @@ async function createSession() {
   return { deviceId, accessToken: token.data.accessToken };
 }
 
-console.log("Testing live Knowledge Access with global_fetch_strictly_public enabled.");
 const health = await fetch(KNOWLEDGE_URL + "/health", { headers });
 if (!health.ok || (await health.json()).status !== "ok") throw new Error("Knowledge Access health check failed");
 
@@ -49,25 +48,16 @@ const publicSigningKey = createPublicKey({ key: publicSigningJwk, format: "jwk" 
 if (!verify("RSA-SHA256", Buffer.from(`${tokenParts[0]}.${tokenParts[1]}`), publicSigningKey, Buffer.from(tokenParts[2], "base64url"))) {
   throw new Error("Issued device token does not verify against public JWKS");
 }
-console.log("Auth token claims verified:", { iss: tokenClaims.iss, aud: tokenClaims.aud, kid: tokenHeader.kid });
-const jwksDebug = await fetch(KNOWLEDGE_URL + "/__debug/jwks", { headers });
-console.log("Worker JWKS fetch diagnostic:", await jwksDebug.json());
-console.log("Checking strict JWT verifier conditions on the live Worker.");
-const tokenDebug = await fetch(KNOWLEDGE_URL + "/__debug/auth", { headers: { ...headers, authorization: `Bearer ${first.accessToken}` } });
-console.log("Worker token verification diagnostic:", await tokenDebug.json());
 const documentId = `ci-${randomUUID()}`;
 const uniqueText = `Purnima knowledge integration verification ${randomUUID()}. বাংলা জ্ঞান অনুসন্ধানের বাস্তব পরীক্ষা।`;
 const ingested = await post(KNOWLEDGE_URL, "/v1/knowledge/ingest", {
   documentId, title: "CI integration verification", text: uniqueText,
 }, first.accessToken);
-console.log("Ingestion result:", ingested.status, ingested.data);
 if (ingested.status !== 202 || ingested.data.status !== "indexed") throw new Error(`Authenticated knowledge ingestion failed: HTTP ${ingested.status} ${JSON.stringify(ingested.data)}`);
 
-console.log("Checking filtered and unfiltered live Vectorize counts.");
 let found = false;
-for (let attempt = 0; attempt < 10; attempt += 1) {
+for (let attempt = 0; attempt < 20; attempt += 1) {
   const searched = await post(KNOWLEDGE_URL, "/v1/knowledge/search", { query: uniqueText, limit: 6 }, first.accessToken);
-  if (attempt === 0) console.log("First search result:", searched.status, searched.data);
   if (searched.status !== 200) throw new Error("Authenticated knowledge search failed");
   if (searched.data.matches?.some((match) => match.metadata?.documentId === documentId)) {
     found = true;
@@ -84,4 +74,4 @@ if (isolated.data.matches?.some((match) => match.metadata?.documentId === docume
   throw new Error("Knowledge Access leaked one device's document to another device");
 }
 
-console.log("Knowledge Access E2E passed: silent device auth, private JWKS service binding, authenticated ingestion, Vectorize retrieval, and device isolation.");
+console.log("Knowledge Access E2E passed: silent device auth, public JWKS verification, authenticated ingestion, Vectorize retrieval, and device isolation.");
