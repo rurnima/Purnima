@@ -1,5 +1,33 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import worker, { type Env } from "../src/index";
+
+let token = "";
+let publicJwk: JsonWebKey & { kid: string };
+
+function base64Url(value: Uint8Array): string {
+  let binary = "";
+  for (const byte of value) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
+}
+
+beforeAll(async () => {
+  const pair = await crypto.subtle.generateKey(
+    { name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" },
+    true,
+    ["sign", "verify"],
+  );
+  publicJwk = { ...await crypto.subtle.exportKey("jwk", pair.publicKey), kid: "test-key" };
+  const header = base64Url(new TextEncoder().encode(JSON.stringify({ alg: "RS256", typ: "JWT", kid: "test-key" })));
+  const claims = base64Url(new TextEncoder().encode(JSON.stringify({
+    iss: "https://issuer.test/",
+    aud: "purnima-api",
+    sub: "user-123",
+    exp: Math.floor(Date.now() / 1000) + 300,
+  })));
+  const signingInput = `${header}.${claims}`;
+  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", pair.privateKey, new TextEncoder().encode(signingInput));
+  token = `${signingInput}.${base64Url(new Uint8Array(signature))}`;
+});
 
 function makeEnv(userId = "user-123") {
   const aiRun = vi.fn(async (_model: string, _input: unknown) => ({
@@ -10,30 +38,32 @@ function makeEnv(userId = "user-123") {
   const query = vi.fn(async (_vector: number[], _options: unknown) => ({
     matches: [{ id: "chunk-1", score: 0.91, metadata: { userId, content: "নমুনা তথ্য" } }],
   }));
-  const authFetch = vi.fn(async () => Response.json({ userId }));
-
   const env = {
     AI: { run: aiRun },
     VECTORIZE: { upsert, deleteByIds, query },
-    AUTH: { fetch: authFetch },
+    OIDC_ISSUER: "https://issuer.test/",
+    OIDC_JWKS_URL: "https://issuer.test/.well-known/jwks.json",
+    OIDC_AUDIENCE: "purnima-api",
   } as unknown as Env;
-
-  return { env, aiRun, upsert, deleteByIds, query, authFetch };
+  return { env, aiRun, upsert, deleteByIds, query };
 }
 
-function post(path: string, body: string, token = "valid-token") {
+function post(path: string, body: string, bearer = token) {
   return new Request(`https://knowledge.test${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
     },
     body,
   });
 }
 
 describe("Purnima Knowledge Access Worker", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ keys: [publicJwk] })));
+  });
 
   it("serves a health response without requiring user authentication", async () => {
     const { env } = makeEnv();
@@ -43,10 +73,10 @@ describe("Purnima Knowledge Access Worker", () => {
   });
 
   it("rejects requests without a bearer token", async () => {
-    const { env, authFetch } = makeEnv();
+    const { env } = makeEnv();
     const response = await worker.fetch(post("/v1/knowledge/search", JSON.stringify({ query: "পরীক্ষা" }), ""), env);
     expect(response.status).toBe(401);
-    expect(authFetch).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("sends BGE-M3 input as an array and replaces obsolete document chunks", async () => {
@@ -59,28 +89,30 @@ describe("Purnima Knowledge Access Worker", () => {
       })),
       env,
     );
-
     expect(response.status).toBe(202);
-    expect(aiRun).toHaveBeenCalledWith("@cf/baai/bge-m3", {
-      text: ["Purnima-এর জন্য একটি বাংলা জ্ঞান নথি।"],
-    });
+    expect(aiRun).toHaveBeenCalledWith("@cf/baai/bge-m3", { text: ["Purnima-এর জন্য একটি বাংলা জ্ঞান নথি।"] });
     expect(upsert).toHaveBeenCalledTimes(1);
     expect(deleteByIds).toHaveBeenCalledTimes(1);
     expect(deleteByIds.mock.calls[0][0]).toHaveLength(56);
   });
 
-  it("scopes vector search to the authenticated user", async () => {
-    const { env, query } = makeEnv("account-A");
+  it("scopes vector search to the verified OIDC subject", async () => {
+    const { env, query } = makeEnv("user-123");
     const response = await worker.fetch(
       post("/v1/knowledge/search", JSON.stringify({ query: "বাংলা জ্ঞান", limit: 5 })),
       env,
     );
-
     expect(response.status).toBe(200);
     expect(query).toHaveBeenCalledWith(
       expect.any(Array),
-      expect.objectContaining({ topK: 5, filter: { userId: "account-A" }, returnMetadata: "all" }),
+      expect.objectContaining({ topK: 5, filter: { userId: "user-123" }, returnMetadata: "all" }),
     );
+  });
+
+  it("rejects a token with the wrong audience", async () => {
+    const { env } = makeEnv();
+    const response = await worker.fetch(post("/v1/knowledge/search", JSON.stringify({ query: "পরীক্ষা" }), "bad.audience.token"), env);
+    expect(response.status).toBe(401);
   });
 
   it("returns 400 for malformed JSON instead of an internal server error", async () => {
