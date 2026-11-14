@@ -4,9 +4,6 @@ on:
   pull_request:
     branches:
       - feature/app-project
-  push:
-    branches:
-      - feature/ai-agent-runtime
 
 permissions:
   contents: read
