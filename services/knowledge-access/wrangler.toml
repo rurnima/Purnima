@@ -1,0 +1,14 @@
+name = "purnima-knowledge-access"
+main = "src/index.ts"
+compatibility_date = "2026-11-14"
+compatibility_flags = ["global_fetch_strictly_public"]
+workers_dev = true
+
+[ai]
+binding = "AI"
+
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "purnima-knowledge-access-dev"
+
+
