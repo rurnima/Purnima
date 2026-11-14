@@ -7,7 +7,7 @@ This service is the isolated retrieval capability for Purnima. It does not add a
 - Cloudflare Worker endpoints: `POST /v1/knowledge/ingest` and `POST /v1/knowledge/search`.
 - Workers AI multilingual embeddings via `@cf/baai/bge-m3`.
 - Vectorize stores chunk embeddings and metadata; search is filtered by the authenticated device's canonical ID.
-- Authentication verifies short-lived RS256 bearer tokens against Purnima Device Auth's fixed issuer and audience. Public JWKS is fetched through a private Cloudflare service binding, not a public URL. The canonical scope is the signed `sub` claim; the client cannot choose its own tenant/user ID.
+- Authentication verifies short-lived RS256 bearer tokens against Purnima Device Auth's fixed issuer and audience. Its public signing keys are fetched over HTTPS from the fixed JWKS endpoint with a descriptive application User-Agent; users configure no URLs or secrets. The canonical scope is the signed `sub` claim; the client cannot choose its own tenant/user ID.
 - Chunking is bounded; ingestion reports accepted indexing work and callers must allow for Vectorize's eventual query visibility.
 
 ## Development resources provisioned
@@ -19,8 +19,8 @@ This service is the isolated retrieval capability for Purnima. It does not add a
 
 ## Authentication integration
 
-The issuer and audience are fixed in the service code; Knowledge Access reaches the signing keys through a private Worker-to-Worker service binding:
-- Internal binding: `AUTH -> purnima-auth`
+The issuer and audience are fixed in the service code; the public signing key endpoint is called directly over HTTPS:
+- JWKS: `https://purnima-auth.purnima.workers.dev/.well-known/jwks.json`
 - Issuer: `https://purnima-auth.purnima.workers.dev`
 - Audience: `purnima-api`
 
@@ -30,7 +30,7 @@ This is a device identity rather than an email/phone/Google account. Reinstallin
 
 ## Deployment readiness
 
-Knowledge Access is not deployed yet. The authentication Worker is deployed and its public health, JWKS, device-registration, challenge, proof, token-issuance, and replay-protection flows have passed a GitHub Actions end-to-end smoke test. The Knowledge Access private service binding and authenticated Vectorize ingestion/search still need deployment and verification. Do not ask the user to manually enter secrets or tokens.
+Knowledge Access is not deployed yet. The authentication Worker is deployed and its public health, JWKS, device-registration, challenge, proof, token-issuance, and replay-protection flows have passed a GitHub Actions end-to-end smoke test. Authenticated Vectorize ingestion/search still need deployment and verification. Do not ask the user to manually enter secrets or tokens.
 
 ## Local verification
 
