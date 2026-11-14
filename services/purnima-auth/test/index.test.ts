@@ -54,7 +54,7 @@ function createMemoryDb(): Env["DB"] {
 function encodeBase64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
+  return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
 function decodeBase64UrlText(value: string): Record<string, unknown> {
@@ -62,7 +62,8 @@ function decodeBase64UrlText(value: string): Record<string, unknown> {
   const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
   return JSON.parse(atob(padded)) as Record<string, unknown>;
 }
-\ndescribe("Purnima device auth routes", () => {
+
+describe("Purnima device auth routes", () => {
   it("reports service health without a login flow", async () => {
     const response = await worker.fetch(new Request("https://auth.example/health"), env);
     expect(response.status).toBe(200);
@@ -147,7 +148,8 @@ function decodeBase64UrlText(value: string): Record<string, unknown> {
     }), testEnv);
     expect(replay.status).toBe(401);
   });
-\n  it("does not expose unimplemented routes", async () => {
+
+  it("does not expose unimplemented routes", async () => {
     const response = await worker.fetch(new Request("https://auth.example/v1/login", { method: "POST" }), env);
     expect(response.status).toBe(404);
   });
