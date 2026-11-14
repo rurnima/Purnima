@@ -123,6 +123,7 @@ class PurnimaDeviceAuth(
             connection.readTimeout = 15_000
             connection.doOutput = true
             connection.setRequestProperty("Content-Type", "application/json")
+            connection.setRequestProperty("User-Agent", "Purnima-Android/0.1")
             connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             val status = connection.responseCode
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream
