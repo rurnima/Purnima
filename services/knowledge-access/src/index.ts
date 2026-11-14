@@ -25,6 +25,7 @@ const MAX_LIMIT = 12;
 const MAX_DOCUMENT_CHARS = 80_000;
 const CHUNK_SIZE = 1_600;
 const CHUNK_OVERLAP = 200;
+const MAX_CHUNKS = 57;
 
 async function authenticate(request: Request, env: Env): Promise<AuthenticatedUser | null> {
   const authorization = request.headers.get("Authorization");
@@ -66,7 +67,7 @@ function chunkText(text: string): string[] {
 }
 
 async function embed(text: string, env: Env): Promise<number[]> {
-  const result = (await env.AI.run(EMBEDDING_MODEL, { text })) as {
+  const result = (await env.AI.run(EMBEDDING_MODEL, { text: [text] })) as {
     data?: number[][];
   };
   const vector = result.data?.[0];
@@ -81,10 +82,18 @@ async function stableId(value: string): Promise<string> {
 }
 
 async function ingest(request: Request, env: Env, user: AuthenticatedUser): Promise<Response> {
-  const body = (await request.json()) as Partial<IngestRequest>;
+  let body: Partial<IngestRequest>;
+  try {
+    body = (await request.json()) as Partial<IngestRequest>;
+  } catch {
+    return json({ error: "Request body must be valid JSON" }, 400);
+  }
   if (
     typeof body.documentId !== "string" ||
+    !body.documentId.trim() ||
+    body.documentId.length > 200 ||
     typeof body.title !== "string" ||
+    !body.title.trim() ||
     typeof body.text !== "string" ||
     body.text.trim().length === 0 ||
     body.text.length > MAX_DOCUMENT_CHARS
@@ -113,13 +122,31 @@ async function ingest(request: Request, env: Env, user: AuthenticatedUser): Prom
   // Vectorize writes are eventually visible to queries; callers must tolerate a
   // short indexing delay after a successful ingest response.
   await env.VECTORIZE.upsert(vectors);
+
+  // Re-ingesting a document replaces its previous chunk set. Remove trailing
+  // deterministic chunk IDs only after the new vectors have been accepted.
+  const obsoleteIds = await Promise.all(
+    Array.from({ length: MAX_CHUNKS - chunks.length }, (_, offset) =>
+      stableId(`${user.id}:${body.documentId}:${chunks.length + offset}`),
+    ),
+  );
+  if (obsoleteIds.length > 0) await env.VECTORIZE.deleteByIds(obsoleteIds);
+
   return json({ documentId: body.documentId, chunksIndexed: vectors.length, status: "indexed" }, 202);
 }
 
 async function search(request: Request, env: Env, user: AuthenticatedUser): Promise<Response> {
-  const body = (await request.json()) as Partial<SearchRequest>;
+  let body: Partial<SearchRequest>;
+  try {
+    body = (await request.json()) as Partial<SearchRequest>;
+  } catch {
+    return json({ error: "Request body must be valid JSON" }, 400);
+  }
   if (typeof body.query !== "string" || !body.query.trim() || body.query.length > 2_000) {
     return json({ error: "query is required and must be at most 2000 characters" }, 400);
+  }
+  if (body.limit !== undefined && (typeof body.limit !== "number" || !Number.isFinite(body.limit))) {
+    return json({ error: "limit must be a finite number" }, 400);
   }
 
   const limit = Math.max(1, Math.min(MAX_LIMIT, Math.floor(body.limit ?? DEFAULT_LIMIT)));
