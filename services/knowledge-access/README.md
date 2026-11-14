@@ -30,7 +30,7 @@ This is a device identity rather than an email/phone/Google account. Reinstallin
 
 ## Deployment readiness
 
-Knowledge Access is not deployed yet. The authentication Worker is deployed and its public health, JWKS, device-registration, challenge, proof, token-issuance, and replay-protection flows have passed a GitHub Actions end-to-end smoke test. Authenticated Vectorize ingestion/search still need deployment and verification. Do not ask the user to manually enter secrets or tokens.
+Knowledge Access is deployed to the Cloudflare development Worker with Workers AI and Vectorize bindings. GitHub Actions has passed the live end-to-end flow: silent device registration, challenge proof, RS256 token verification via JWKS, authenticated ingestion, Vectorize retrieval, and cross-device isolation. The test accounts for Vectorize eventual consistency. The app-level Android call site and physical-device Keystore flow still need integration verification. Do not ask the user to manually enter secrets or tokens.
 
 ## Local verification
 
@@ -57,9 +57,9 @@ The isolated GitHub Actions workflow runs type-checking and unit tests on PR upd
 
 ## Verification still required
 
-- Verify public access to the Device Auth Worker and Android Keystore session acquisition.
-- Run authenticated ingestion/search against the development Vectorize index and verify persisted vector count plus device isolation.
-- Run local type-check/tests and deploy to a non-production environment before enabling it in the app.
+- Integrate the silent Android Keystore session provider with Purnima API call sites.
+- Verify the live session flow on a physical Android device or emulator.
+- Keep this PR separate and unmerged until app integration is verified.
 
 ## Official references
 
