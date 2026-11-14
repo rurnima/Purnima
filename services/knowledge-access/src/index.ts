@@ -1,7 +1,20 @@
+type VectorMetadata = Record<string, string | number>;
+
 export interface Env {
-  AI: Ai;
-  VECTORIZE: VectorizeIndex;
-  AUTH: Fetcher;
+  AI: {
+    run(model: string, input: { text: string[] }): Promise<{ data?: number[][] }>;
+  };
+  VECTORIZE: {
+    upsert(vectors: Array<{ id: string; values: number[]; metadata: VectorMetadata }>): Promise<unknown>;
+    deleteByIds(ids: string[]): Promise<unknown>;
+    query(
+      vector: number[],
+      options: { topK: number; filter: Record<string, string>; returnMetadata: "all" },
+    ): Promise<{ matches?: Array<{ id: string; score?: number; metadata?: unknown }> }>;
+  };
+  AUTH: {
+    fetch(input: string | Request, init?: RequestInit): Promise<Response>;
+  };
 }
 
 interface AuthenticatedUser {
@@ -67,9 +80,7 @@ function chunkText(text: string): string[] {
 }
 
 async function embed(text: string, env: Env): Promise<number[]> {
-  const result = (await env.AI.run(EMBEDDING_MODEL, { text: [text] })) as {
-    data?: number[][];
-  };
+  const result = await env.AI.run(EMBEDDING_MODEL, { text: [text] });
   const vector = result.data?.[0];
   if (!vector?.length) throw new Error("Embedding model returned no vector");
   if (vector.length !== 1024) throw new Error(`Embedding dimension mismatch: expected 1024, received ${vector.length}`);
