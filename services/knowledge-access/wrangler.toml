@@ -1,0 +1,17 @@
+name = "purnima-knowledge-access"
+main = "src/index.ts"
+compatibility_date = "2026-11-14"
+workers_dev = true
+
+[ai]
+binding = "AI"
+
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "purnima-knowledge-access-dev"
+
+# The trusted Purnima auth Worker must be deployed before this service can be
+# deployed. Never replace this private service binding with a client-supplied ID.
+[[services]]
+binding = "AUTH"
+service = "purnima-auth"
