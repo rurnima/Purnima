@@ -7,7 +7,7 @@ This service is the isolated retrieval capability for Purnima. It does not add a
 - Cloudflare Worker endpoints: `POST /v1/knowledge/ingest` and `POST /v1/knowledge/search`.
 - Workers AI multilingual embeddings via `@cf/baai/bge-m3`.
 - Vectorize stores chunk embeddings and metadata; search is filtered by the authenticated user's canonical ID.
-- Authentication is delegated to a private `AUTH` Worker service binding. The client cannot choose its own tenant/user ID.
+- Authentication verifies short-lived OIDC RS256 bearer tokens against the configured issuer, audience, and JWKS endpoint. The canonical user ID is the signed `sub` claim; the client cannot choose its own tenant/user ID.
 - Chunking is bounded; ingestion reports accepted indexing work and callers must allow for Vectorize's eventual query visibility.
 
 ## Development resources provisioned
@@ -21,7 +21,7 @@ This service is the isolated retrieval capability for Purnima. It does not add a
 
 The Worker configuration is present in `wrangler.toml` and binds the development Vectorize index and Workers AI. The private `AUTH` service binding points to `purnima-auth`, but that trusted authentication Worker does not yet exist in the Cloudflare account. The only existing Worker is the separate Knowledge Hunting service; it must not be reused for this feature.
 
-Therefore this service is intentionally **not deployed yet**. Deployment must wait until the Purnima authentication service is implemented and can validate the same short-lived bearer tokens issued to the app. Never replace the service binding with a user ID supplied by the Android client.
+Therefore this service is intentionally **not deployed yet**. Deployment must wait until a real OIDC provider and Android per-user sign-in flow are selected and configured. Both services must validate the same short-lived user access tokens. Never replace the service binding with a user ID supplied by the Android client.
 
 ## Local verification
 
@@ -41,7 +41,7 @@ The isolated GitHub Actions workflow runs type-checking and unit tests on PR upd
 
 ## Security and scope
 
-- User scope comes only from the trusted AUTH service.
+- User scope comes only from the verified OIDC `sub` claim.
 - Vector metadata filtering is not a substitute for authorization; every request is authenticated first.
 - No API keys or LiveKit credentials belong in Android resources or the repository.
 - This feature does not change Home, Chat, Voice UI, Agent Runtime, or D1 learning records.
@@ -49,7 +49,9 @@ The isolated GitHub Actions workflow runs type-checking and unit tests on PR upd
 ## Verification still required
 
 - Add a deployment config after the Vectorize index and AUTH service are provisioned.
-- Add Worker unit tests for auth failure, tenant isolation, invalid input, chunking, and eventual indexing behavior.
+- Configure the selected OIDC issuer, JWKS URL, and audience in both Agent Runtime and Knowledge Access.
+- Add Android per-user sign-in/session integration and verify the provider's token claims.
+- Run authenticated ingestion/search against the development Vectorize index and verify persisted vector count plus tenant isolation.
 - Run local type-check/tests and deploy to a non-production environment before enabling it in the app.
 
 ## Official references
