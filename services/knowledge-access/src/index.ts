@@ -1,0 +1,161 @@
+export interface Env {
+  AI: Ai;
+  VECTORIZE: VectorizeIndex;
+  AUTH: Fetcher;
+}
+
+interface AuthenticatedUser {
+  id: string;
+}
+
+interface SearchRequest {
+  query: string;
+  limit?: number;
+}
+
+interface IngestRequest {
+  documentId: string;
+  title: string;
+  text: string;
+}
+
+const EMBEDDING_MODEL = "@cf/baai/bge-m3";
+const DEFAULT_LIMIT = 6;
+const MAX_LIMIT = 12;
+const MAX_DOCUMENT_CHARS = 80_000;
+const CHUNK_SIZE = 1_600;
+const CHUNK_OVERLAP = 200;
+
+async function authenticate(request: Request, env: Env): Promise<AuthenticatedUser | null> {
+  const authorization = request.headers.get("Authorization");
+  if (!authorization?.startsWith("Bearer ")) return null;
+
+  // AUTH is a private Worker service binding. It validates the session token and
+  // returns the canonical user ID; never trust a user ID supplied by the Android client.
+  const response = await env.AUTH.fetch("https://auth.internal/v1/session/verify", {
+    method: "POST",
+    headers: { Authorization: authorization },
+  });
+  if (!response.ok) return null;
+
+  const payload = (await response.json()) as { userId?: unknown };
+  return typeof payload.userId === "string" && payload.userId.length > 0
+    ? { id: payload.userId }
+    : null;
+}
+
+function json(data: unknown, status = 200): Response {
+  return Response.json(data, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+function chunkText(text: string): string[] {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  const chunks: string[] = [];
+  let start = 0;
+  while (start < normalized.length) {
+    const end = Math.min(start + CHUNK_SIZE, normalized.length);
+    const chunk = normalized.slice(start, end).trim();
+    if (chunk) chunks.push(chunk);
+    if (end === normalized.length) break;
+    start = end - CHUNK_OVERLAP;
+  }
+  return chunks;
+}
+
+async function embed(text: string, env: Env): Promise<number[]> {
+  const result = (await env.AI.run(EMBEDDING_MODEL, { text })) as {
+    data?: number[][];
+  };
+  const vector = result.data?.[0];
+  if (!vector?.length) throw new Error("Embedding model returned no vector");
+  return vector;
+}
+
+async function stableId(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function ingest(request: Request, env: Env, user: AuthenticatedUser): Promise<Response> {
+  const body = (await request.json()) as Partial<IngestRequest>;
+  if (
+    typeof body.documentId !== "string" ||
+    typeof body.title !== "string" ||
+    typeof body.text !== "string" ||
+    body.text.trim().length === 0 ||
+    body.text.length > MAX_DOCUMENT_CHARS
+  ) {
+    return json({ error: "documentId, title and text are required; text limit is 80000 characters" }, 400);
+  }
+
+  const chunks = chunkText(body.text);
+  const vectors = [];
+  for (let index = 0; index < chunks.length; index += 1) {
+    const content = chunks[index];
+    const values = await embed(content, env);
+    vectors.push({
+      id: await stableId(`${user.id}:${body.documentId}:${index}`),
+      values,
+      metadata: {
+        userId: user.id,
+        documentId: body.documentId,
+        title: body.title.slice(0, 200),
+        chunkIndex: index,
+        content,
+      },
+    });
+  }
+
+  // Vectorize writes are eventually visible to queries; callers must tolerate a
+  // short indexing delay after a successful ingest response.
+  await env.VECTORIZE.upsert(vectors);
+  return json({ documentId: body.documentId, chunksIndexed: vectors.length, status: "indexed" }, 202);
+}
+
+async function search(request: Request, env: Env, user: AuthenticatedUser): Promise<Response> {
+  const body = (await request.json()) as Partial<SearchRequest>;
+  if (typeof body.query !== "string" || !body.query.trim() || body.query.length > 2_000) {
+    return json({ error: "query is required and must be at most 2000 characters" }, 400);
+  }
+
+  const limit = Math.max(1, Math.min(MAX_LIMIT, Math.floor(body.limit ?? DEFAULT_LIMIT)));
+  const vector = await embed(body.query.trim(), env);
+  const result = await env.VECTORIZE.query(vector, {
+    topK: limit,
+    filter: { userId: user.id },
+    returnMetadata: "all",
+  });
+
+  const matches = (result.matches ?? []).map((match) => ({
+    id: match.id,
+    score: match.score,
+    metadata: match.metadata,
+  }));
+  return json({ matches });
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    if (request.method === "GET" && url.pathname === "/health") {
+      return json({ service: "purnima-knowledge-access", status: "ok" });
+    }
+
+    if (request.method !== "POST" || !["/v1/knowledge/ingest", "/v1/knowledge/search"].includes(url.pathname)) {
+      return json({ error: "Not found" }, 404);
+    }
+
+    try {
+      const user = await authenticate(request, env);
+      if (!user) return json({ error: "Unauthorized" }, 401);
+      return url.pathname.endsWith("/ingest")
+        ? await ingest(request, env, user)
+        : await search(request, env, user);
+    } catch {
+      return json({ error: "Knowledge service request failed" }, 500);
+    }
+  },
+};
