@@ -4,8 +4,9 @@ const AUTH_URL = "https://purnima-auth.purnima.workers.dev";
 const KNOWLEDGE_URL = "https://purnima-knowledge-access.purnima.workers.dev";
 const headers = { "content-type": "application/json", "user-agent": "Purnima-Knowledge-Access-CI/1.0" };
 
-async function post(base, path, body) {
-  const response = await fetch(base + path, { method: "POST", headers, body: JSON.stringify(body) });
+async function post(base, path, body, bearerToken) {
+  const requestHeaders = bearerToken ? { ...headers, authorization: `Bearer ${bearerToken}` } : headers;
+  const response = await fetch(base + path, { method: "POST", headers: requestHeaders, body: JSON.stringify(body) });
   const text = await response.text();
   let data;
   try { data = JSON.parse(text); } catch { throw new Error(`${path}: HTTP ${response.status}: ${text.slice(0, 300)}`); }
@@ -58,12 +59,12 @@ const documentId = `ci-${randomUUID()}`;
 const uniqueText = `Purnima knowledge integration verification ${randomUUID()}. বাংলা জ্ঞান অনুসন্ধানের বাস্তব পরীক্ষা।`;
 const ingested = await post(KNOWLEDGE_URL, "/v1/knowledge/ingest", {
   documentId, title: "CI integration verification", text: uniqueText,
-}, );
+}, first.accessToken);
 if (ingested.status !== 202 || ingested.data.status !== "indexed") throw new Error(`Authenticated knowledge ingestion failed: HTTP ${ingested.status} ${JSON.stringify(ingested.data)}`);
 
 let found = false;
 for (let attempt = 0; attempt < 10; attempt += 1) {
-  const searched = await post(KNOWLEDGE_URL, "/v1/knowledge/search", { query: uniqueText, limit: 6, }, );
+  const searched = await post(KNOWLEDGE_URL, "/v1/knowledge/search", { query: uniqueText, limit: 6 }, first.accessToken);
   if (searched.status !== 200) throw new Error("Authenticated knowledge search failed");
   if (searched.data.matches?.some((match) => match.metadata?.documentId === documentId)) {
     found = true;
@@ -74,7 +75,7 @@ for (let attempt = 0; attempt < 10; attempt += 1) {
 if (!found) throw new Error("Ingested document did not become searchable in Vectorize");
 
 const second = await createSession();
-const isolated = await post(KNOWLEDGE_URL, "/v1/knowledge/search", { query: uniqueText, limit: 6 }, );
+const isolated = await post(KNOWLEDGE_URL, "/v1/knowledge/search", { query: uniqueText, limit: 6 }, second.accessToken);
 if (isolated.status !== 200) throw new Error("Second-device search failed");
 if (isolated.data.matches?.some((match) => match.metadata?.documentId === documentId)) {
   throw new Error("Knowledge Access leaked one device's document to another device");
