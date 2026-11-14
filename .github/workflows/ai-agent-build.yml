@@ -26,3 +26,23 @@ jobs:
           gradle-version: '8.9'
       - name: Build debug APK
         run: gradle --no-daemon assembleDebug
+
+  backend-typecheck:
+    name: Agent backend typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agent-backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: agent-backend/package-lock.json
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Typecheck Worker
+        run: npm run typecheck
