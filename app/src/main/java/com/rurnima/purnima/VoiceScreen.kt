@@ -121,27 +121,29 @@ fun VoiceScreen(onNavigate: (String) -> Unit = {}) {
                 val room = LiveKit.create(appContext = context.applicationContext)
                 liveRoom = room
                 eventJob = launch {
-                    room.events.collect { event ->
-                        when (event) {
-                            is RoomEvent.Connected -> {
-                                connected = true
-                                connecting = false
-                                status = "Connected — Purnima is ready"
+                    room.events.collect(object : kotlinx.coroutines.flow.FlowCollector<RoomEvent> {
+                        override suspend fun emit(event: RoomEvent) {
+                            when (event) {
+                                is RoomEvent.Connected -> {
+                                    connected = true
+                                    connecting = false
+                                    status = "Connected — Purnima is ready"
+                                }
+                                is RoomEvent.Reconnecting -> status = "Reconnecting…"
+                                is RoomEvent.Reconnected -> status = "Connection restored"
+                                is RoomEvent.ParticipantConnected -> {
+                                    if (connected) status = "Purnima joined — you can talk now"
+                                }
+                                is RoomEvent.Disconnected -> {
+                                    connected = false
+                                    connecting = false
+                                    microphoneEnabled = false
+                                    status = "Call ended"
+                                }
+                                else -> Unit
                             }
-                            is RoomEvent.Reconnecting -> status = "Reconnecting…"
-                            is RoomEvent.Reconnected -> status = "Connection restored"
-                            is RoomEvent.ParticipantConnected -> {
-                                if (connected) status = "Purnima joined — you can talk now"
-                            }
-                            is RoomEvent.Disconnected -> {
-                                connected = false
-                                connecting = false
-                                microphoneEnabled = false
-                                status = "Call ended"
-                            }
-                            else -> Unit
                         }
-                    }
+                    })
                 }
                 room.connect(credentials.serverUrl, credentials.participantToken)
                 room.localParticipant.setMicrophoneEnabled(true)
