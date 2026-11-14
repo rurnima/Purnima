@@ -1,4 +1,4 @@
-import { generateKeyPairSync, randomUUID, sign } from "node:crypto";
+import { createPublicKey, generateKeyPairSync, randomUUID, sign, verify } from "node:crypto";
 
 const AUTH_URL = "https://purnima-auth.purnima.workers.dev";
 const KNOWLEDGE_URL = "https://purnima-knowledge-access.purnima.workers.dev";
@@ -34,6 +34,20 @@ const health = await fetch(KNOWLEDGE_URL + "/health", { headers });
 if (!health.ok || (await health.json()).status !== "ok") throw new Error("Knowledge Access health check failed");
 
 const first = await createSession();
+const tokenParts = first.accessToken.split(".");
+const tokenHeader = JSON.parse(Buffer.from(tokenParts[0], "base64url").toString("utf8"));
+const tokenClaims = JSON.parse(Buffer.from(tokenParts[1], "base64url").toString("utf8"));
+const publishedJwks = await fetch(AUTH_URL + "/.well-known/jwks.json", { headers });
+const jwksData = await publishedJwks.json();
+const publicSigningJwk = jwksData.keys?.find((key) => key.kid === tokenHeader.kid);
+if (!publicSigningJwk || tokenClaims.iss !== AUTH_URL || tokenClaims.aud !== "purnima-api") {
+  throw new Error("Issued device token has unexpected issuer, audience, or key id");
+}
+const publicSigningKey = createPublicKey({ key: publicSigningJwk, format: "jwk" });
+if (!verify("RSA-SHA256", Buffer.from(`${tokenParts[0]}.${tokenParts[1]}`), publicSigningKey, Buffer.from(tokenParts[2], "base64url"))) {
+  throw new Error("Issued device token does not verify against public JWKS");
+}
+console.log("Auth token claims verified:", { iss: tokenClaims.iss, aud: tokenClaims.aud, kid: tokenHeader.kid });
 const documentId = `ci-${randomUUID()}`;
 const uniqueText = `Purnima knowledge integration verification ${randomUUID()}. বাংলা জ্ঞান অনুসন্ধানের বাস্তব পরীক্ষা।`;
 const ingested = await post(KNOWLEDGE_URL, "/v1/knowledge/ingest", {
