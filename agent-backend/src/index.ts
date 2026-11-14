@@ -3,9 +3,6 @@ export interface WorkersAI {
 }
 
 export interface Env {
-  OIDC_ISSUER: string;
-  OIDC_JWKS_URL: string;
-  OIDC_AUDIENCE: string;
   AI: WorkersAI;
 }
 
@@ -69,73 +66,6 @@ function json(body: unknown, status = 200): Response {
  * Return an ArrayBuffer-backed view. Web Crypto's BufferSource types require
  * ArrayBuffer here; a generic Uint8Array may also be backed by SharedArrayBuffer.
  */
-function decodeBase64Url(value: string): Uint8Array<ArrayBuffer> {
-  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
-  const binary = atob(padded);
-  const bytes = new Uint8Array(new ArrayBuffer(binary.length));
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  return bytes;
-}
-
-function decodeJsonSegment(value: string): Record<string, unknown> {
-  return JSON.parse(new TextDecoder().decode(decodeBase64Url(value))) as Record<string, unknown>;
-}
-
-function audienceMatches(tokenAudience: unknown, expected: string): boolean {
-  return typeof tokenAudience === "string"
-    ? tokenAudience === expected
-    : Array.isArray(tokenAudience) && tokenAudience.includes(expected);
-}
-
-async function verifyAccessToken(token: string, env: Env): Promise<boolean> {
-  try {
-    if (token.length > 8_192) return false;
-    const parts = token.split(".");
-    if (parts.length !== 3) return false;
-
-    const header = decodeJsonSegment(parts[0]);
-    const claims = decodeJsonSegment(parts[1]);
-    if (header.alg !== "RS256" || typeof header.kid !== "string") return false;
-
-    // OIDC issuer identifiers are exact strings; do not normalize away a trailing slash.
-    if (claims.iss !== env.OIDC_ISSUER || !audienceMatches(claims.aud, env.OIDC_AUDIENCE)) {
-      return false;
-    }
-
-    const now = Math.floor(Date.now() / 1000);
-    if (typeof claims.exp !== "number" || claims.exp <= now) return false;
-    if (typeof claims.nbf === "number" && claims.nbf > now) return false;
-
-    const jwksResponse = await fetch(env.OIDC_JWKS_URL, {
-      headers: { accept: "application/json" },
-    });
-    if (!jwksResponse.ok) return false;
-
-    const jwks = await jwksResponse.json() as { keys?: JsonWebKey[] };
-    const jwk = jwks.keys?.find((key) => (key as JsonWebKey & { kid?: string }).kid === header.kid);
-    if (!jwk) return false;
-
-    const publicKey = await crypto.subtle.importKey(
-      "jwk",
-      jwk,
-      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-      false,
-      ["verify"],
-    );
-    return crypto.subtle.verify(
-      "RSASSA-PKCS1-v1_5",
-      publicKey,
-      decodeBase64Url(parts[2]),
-      new TextEncoder().encode(parts.slice(0, 2).join(".")),
-    );
-  } catch {
-    return false;
-  }
-}
-
 function validateRequest(value: unknown): AgentRequest | null {
   if (!value || typeof value !== "object") return null;
   const candidate = value as Record<string, unknown>;
@@ -297,12 +227,8 @@ export default {
       return json({ error: "not_found" }, 404);
     }
 
-    const authorization = request.headers.get("authorization") ?? "";
-    const match = /^Bearer\s+(.+)$/i.exec(authorization);
-    if (!match || !(await verifyAccessToken(match[1], env))) {
-      return json({ error: "unauthorized" }, 401);
-    }
-
+    // No user login or manually supplied bearer token is required.
+    // Protect this public mobile endpoint with Cloudflare edge rate-limiting rules.
     const declaredLength = Number(request.headers.get("content-length") ?? "0");
     if (declaredLength > MAX_BODY_BYTES) return json({ error: "payload_too_large" }, 413);
 
