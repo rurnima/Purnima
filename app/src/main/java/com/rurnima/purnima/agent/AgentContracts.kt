@@ -43,8 +43,8 @@ data class AgentRunResult(
 )
 
 /**
- * Implementations will connect the instruction to an authenticated agent service and its
- * allow-listed tools. No GitHub credentials or model secrets belong in the Android APK.
+ * Implementations connect the instruction to a server-side agent service and its
+ * allow-listed tools. The mobile user must not be asked for a login or manual token. No GitHub credentials or model secrets belong in the Android APK.
  */
 interface AgentRuntime {
     suspend fun run(instruction: AgentInstruction): AgentRunResult
