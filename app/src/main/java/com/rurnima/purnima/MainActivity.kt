@@ -30,7 +30,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
+import android.view.TextureView
 
 private val Night = Color(0xFF080610)
 private val Violet = Color(0xFF9B5CFF)
@@ -185,18 +185,28 @@ private fun OrbAnimationVideo(modifier: Modifier = Modifier) {
         onDispose { player.release() }
     }
 
+    var textureView by remember { mutableStateOf<TextureView?>(null) }
+
+    DisposableEffect(player, textureView) {
+        onDispose { textureView?.let(player::clearVideoTextureView) }
+    }
+
     AndroidView(
         modifier = modifier,
         factory = { viewContext ->
-            PlayerView(viewContext).apply {
-                useController = false
-                setUseTextureView(true)
-                setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+            TextureView(viewContext).apply {
+                isOpaque = false
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                this.player = player
+                textureView = this
+                player.setVideoTextureView(this)
             }
         },
-        update = { it.player = player }
+        update = { view ->
+            if (textureView !== view) {
+                textureView = view
+                player.setVideoTextureView(view)
+            }
+        }
     )
 }
 
