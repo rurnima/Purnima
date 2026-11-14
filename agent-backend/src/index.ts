@@ -56,7 +56,6 @@ async function verifyAccessToken(token: string, env: Env): Promise<boolean> {
 
     const jwksResponse = await fetch(env.OIDC_JWKS_URL, {
       headers: { accept: "application/json" },
-      cf: { cacheTtl: 300, cacheEverything: true },
     });
     if (!jwksResponse.ok) return false;
 
