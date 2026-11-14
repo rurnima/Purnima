@@ -21,11 +21,19 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-function decodeBase64Url(value: string): Uint8Array {
+/**
+ * Return an ArrayBuffer-backed view. Web Crypto's BufferSource types require
+ * ArrayBuffer here; a generic Uint8Array may also be backed by SharedArrayBuffer.
+ */
+function decodeBase64Url(value: string): Uint8Array<ArrayBuffer> {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
   const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
   const binary = atob(padded);
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  const bytes = new Uint8Array(new ArrayBuffer(binary.length));
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
 }
 
 function decodeJsonSegment(value: string): Record<string, unknown> {
@@ -102,7 +110,7 @@ export default {
     }
 
     const authorization = request.headers.get("authorization") ?? "";
-    const match = /^Bearer\s+(.+)$/i.exec(authorization);
+    const match = /^Bearer\\s+(.+)$/i.exec(authorization);
     if (!match || !(await verifyAccessToken(match[1], env))) {
       return json({ error: "unauthorized" }, 401);
     }
