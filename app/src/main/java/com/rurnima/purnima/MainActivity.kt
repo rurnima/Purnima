@@ -9,6 +9,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,7 +20,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,8 +49,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
+                var currentScreen by remember { mutableStateOf("Home") }
                 Surface(Modifier.fillMaxSize(), color = Night) {
-                    PurnimaHomeScreen()
+                    when (currentScreen) {
+                        "Chat" -> ChatScreen(onNavigate = { destination ->
+                            if (destination == "Home") currentScreen = "Home"
+                        })
+                        else -> PurnimaHomeScreen(onNavigate = { destination ->
+                            if (destination == "Chat") currentScreen = "Chat"
+                        })
+                    }
                 }
             }
         }
@@ -54,7 +66,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun PurnimaHomeScreen() {
+private fun PurnimaHomeScreen(onNavigate: (String) -> Unit) {
     Box(
         Modifier
             .fillMaxSize()
@@ -110,7 +122,7 @@ private fun PurnimaHomeScreen() {
                 )
             }
 
-            BottomNavigationBar()
+            BottomNavigationBar(onNavigate)
         }
     }
 }
@@ -224,7 +236,7 @@ private fun CosmicBackdrop(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun BottomNavigationBar() {
+private fun BottomNavigationBar(onNavigate: (String) -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -235,19 +247,20 @@ private fun BottomNavigationBar() {
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        BottomNavItem("⌂", "Home", true)
-        BottomNavItem("▢", "Chat", false)
-        BottomNavItem("♩", "Voice", false)
-        BottomNavItem("◴", "History", false)
-        BottomNavItem("⚙", "Settings", false)
+        BottomNavItem("⌂", "Home", true) { onNavigate("Home") }
+        BottomNavItem("▢", "Chat", false) { onNavigate("Chat") }
+        BottomNavItem("♩", "Voice", false) { }
+        BottomNavItem("◴", "History", false) { }
+        BottomNavItem("⚙", "Settings", false) { }
     }
 }
 
 @Composable
-private fun RowScope.BottomNavItem(symbol: String, label: String, selected: Boolean) {
+private fun RowScope.BottomNavItem(symbol: String, label: String, selected: Boolean, onClick: () -> Unit) {
     Column(
         Modifier
             .weight(1f)
+            .clickable(onClick = onClick)
             .fillMaxHeight()
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
             .background(if (selected) Color(0x663D0878) else Color.Transparent),

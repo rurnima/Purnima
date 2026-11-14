@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - feature/home-screen
+  push:
+    branches:
+      - feature/chat-integration
 
 jobs:
   assemble-debug:
