@@ -19,7 +19,7 @@ beforeAll(async () => {
   publicJwk = { ...await crypto.subtle.exportKey("jwk", pair.publicKey), kid: "test-key" };
   const header = base64Url(new TextEncoder().encode(JSON.stringify({ alg: "RS256", typ: "JWT", kid: "test-key" })));
   const claims = base64Url(new TextEncoder().encode(JSON.stringify({
-    iss: "https://issuer.test/",
+    iss: "https://purnima-auth.purnima.workers.dev",
     aud: "purnima-api",
     sub: "user-123",
     exp: Math.floor(Date.now() / 1000) + 300,
@@ -38,12 +38,13 @@ function makeEnv(userId = "user-123") {
   const query = vi.fn(async (_vector: number[], _options: unknown) => ({
     matches: [{ id: "chunk-1", score: 0.91, metadata: { userId, content: "নমুনা তথ্য" } }],
   }));
+  const authFetch = vi.fn(async () => Response.json({ keys: [publicJwk] }));
   const env = {
     AI: { run: aiRun },
     VECTORIZE: { upsert, deleteByIds, query },
-    AUTH: { fetch: vi.fn(async () => Response.json({ keys: [publicJwk] })) },
+    AUTH: { fetch: authFetch },
   } as unknown as Env;
-  return { env, aiRun, upsert, deleteByIds, query };
+  return { env, aiRun, upsert, deleteByIds, query, authFetch };
 }
 
 function post(path: string, body: string, bearer = token) {
@@ -71,10 +72,10 @@ describe("Purnima Knowledge Access Worker", () => {
   });
 
   it("rejects requests without a bearer token", async () => {
-    const { env } = makeEnv();
+    const { env, authFetch } = makeEnv();
     const response = await worker.fetch(post("/v1/knowledge/search", JSON.stringify({ query: "পরীক্ষা" }), ""), env);
     expect(response.status).toBe(401);
-    expect(fetch).not.toHaveBeenCalled();
+    expect(authFetch).not.toHaveBeenCalled();
   });
 
   it("sends BGE-M3 input as an array and replaces obsolete document chunks", async () => {
