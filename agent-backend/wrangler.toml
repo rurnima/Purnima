@@ -1,0 +1,10 @@
+name = "purnima-agent-gateway"
+main = "src/index.ts"
+compatibility_date = "2026-11-14"
+
+[vars]
+# Set these to the identity provider's exact issuer, JWKS endpoint, and API audience.
+# Never put signing keys, API keys, or user tokens in this file.
+OIDC_ISSUER = "https://identity.example.com/"
+OIDC_JWKS_URL = "https://identity.example.com/.well-known/jwks.json"
+OIDC_AUDIENCE = "purnima-agent-api"
