@@ -88,6 +88,9 @@ async function ingest(request: Request, env: Env, user: AuthenticatedUser): Prom
   } catch {
     return json({ error: "Request body must be valid JSON" }, 400);
   }
+  if (!body || typeof body !== "object") {
+    return json({ error: "Request body must be a JSON object" }, 400);
+  }
   if (
     typeof body.documentId !== "string" ||
     !body.documentId.trim() ||
@@ -141,6 +144,9 @@ async function search(request: Request, env: Env, user: AuthenticatedUser): Prom
     body = (await request.json()) as Partial<SearchRequest>;
   } catch {
     return json({ error: "Request body must be valid JSON" }, 400);
+  }
+  if (!body || typeof body !== "object") {
+    return json({ error: "Request body must be a JSON object" }, 400);
   }
   if (typeof body.query !== "string" || !body.query.trim() || body.query.length > 2_000) {
     return json({ error: "query is required and must be at most 2000 characters" }, 400);
