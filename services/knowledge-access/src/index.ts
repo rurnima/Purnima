@@ -71,6 +71,7 @@ async function embed(text: string, env: Env): Promise<number[]> {
   };
   const vector = result.data?.[0];
   if (!vector?.length) throw new Error("Embedding model returned no vector");
+  if (vector.length !== 1024) throw new Error(`Embedding dimension mismatch: expected 1024, received ${vector.length}`);
   return vector;
 }
 
