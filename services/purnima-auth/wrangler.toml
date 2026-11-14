@@ -1,0 +1,12 @@
+name = "purnima-auth"
+main = "src/index.ts"
+compatibility_date = "2026-11-14"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "purnima-device-auth-dev"
+database_id = "62090662-5dd3-40bc-a347-a1032dddbbba"
+
+[vars]
+AUTH_KEY_ID = "purnima-auth-rs256-2026-01"
