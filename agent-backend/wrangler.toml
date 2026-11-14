@@ -1,0 +1,9 @@
+name = "purnima-agent-gateway"
+main = "src/index.ts"
+compatibility_date = "2026-11-14"
+
+[ai]
+binding = "AI"
+
+# No user token or identity-provider configuration is required.
+# Configure Cloudflare edge rate limiting before exposing /v1/agent publicly.
