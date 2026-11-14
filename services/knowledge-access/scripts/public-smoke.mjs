@@ -30,6 +30,7 @@ async function createSession() {
   return { deviceId, accessToken: token.data.accessToken };
 }
 
+console.log("Testing live Knowledge Access with global_fetch_strictly_public enabled.");
 const health = await fetch(KNOWLEDGE_URL + "/health", { headers });
 if (!health.ok || (await health.json()).status !== "ok") throw new Error("Knowledge Access health check failed");
 
