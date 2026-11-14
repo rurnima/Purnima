@@ -53,6 +53,7 @@ export default {
         const id = crypto.randomUUID();
         const category = typeof body.category === "string" ? body.category.slice(0, 80) : "general";
         const source = typeof body.source === "string" ? body.source.slice(0, 80) : "conversation";
+        if (!category.trim() || !source.trim()) return json({ error: "category and source cannot be empty" }, 400);
         const now = new Date().toISOString();
         await env.DB.batch([
           env.DB.prepare(
@@ -110,6 +111,10 @@ export default {
       }
 
       if (request.method === "DELETE") {
+        const current = await env.DB.prepare(
+          "SELECT id FROM memory_items WHERE id = ? AND user_id = ?"
+        ).bind(id, user.id).first();
+        if (!current) return json({ error: "Memory not found" }, 404);
         await env.DB.batch([
           env.DB.prepare("DELETE FROM memory_items WHERE id = ? AND user_id = ?").bind(id, user.id),
           env.DB.prepare(
