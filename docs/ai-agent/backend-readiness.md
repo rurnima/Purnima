@@ -1,32 +1,37 @@
-# AI Agent backend readiness — duplicate/resource check
+# AI Agent backend readiness
 
-Checked on 2026-11-14 before starting backend implementation.
+Updated 2026-11-14 after implementing the login-free Worker planner and Android plan-response parsing.
 
-## Existing repository work (do not duplicate)
+## Scope isolation
 
-- PR #7 `feature/ai-agent-runtime` already owns the Android runtime contracts, HTTPS adapter, architecture notes, and Android build workflow. Continue in this PR; do not open another Agent Runtime PR.
-- PR #6 `feature/knowledge-hunting` owns the isolated Knowledge Hunting Compose screen and its provider/API inventory. Keep Knowledge Hunting separate from Agent Runtime.
-- The latest PR #7 GitHub Actions run (`43568809052`) completed successfully: the `Assemble debug APK` job and its build step both concluded `success`. This is Android scaffold evidence only; it does not prove a backend exists or is connected.
+- Continue Agent Runtime only in PR #7, branch `feature/ai-agent-runtime`.
+- Keep Knowledge Hunting, Self-update, Chat UI, and Home Screen work separate.
+- Agent entry points belong in existing Chat and Voice experiences; do not add a standalone Home control or screen.
 
-## Cloudflare resource inventory
+## Current implementation
 
-Read-only account inventory returned:
+- [x] Dedicated Cloudflare Worker gateway source exists under `agent-backend/`.
+- [x] Worker uses the server-side Workers AI binding; no model key is placed in the APK.
+- [x] Mobile requests do not require user login, bearer tokens, or manual API-key entry.
+- [x] Worker validates bounded input and model plans against an allow-list.
+- [x] Proposed write/code-changing actions require approval and are marked `not_executed`.
+- [x] Android contracts now represent structured plan steps, approval requirement, and execution status.
+- [x] Android HTTP adapter now parses the Worker `plan`, `executionEnabled`, and `executionStatus` fields.
 
-- Worker script: `purnima-knowledge-hunting` (already exists; reserved for the Knowledge Hunting feature and must not be repurposed as the Agent backend).
-- D1 databases: none listed.
-- Durable Object namespace: `purnima-knowledge-hunting_IpRateLimiter` (belongs to the Knowledge Hunting rate limiter; must not be reused as Agent conversation storage).
-- No Worker script named `purnima-agent-runtime` appeared in the listed scripts.
+## Not implemented / not verified
 
-## Backend implementation boundary
+- [ ] Chat and Voice screens are not yet wired to the runtime.
+- [ ] No GitHub MCP tool execution is connected; proposals are not executed.
+- [ ] No persisted conversation state or sanitized audit store.
+- [ ] No in-app approval flow for write actions.
+- [ ] No isolated build/test executor.
+- [ ] Cloudflare Worker deployment and live endpoint behavior have not been verified.
+- [ ] Cloudflare edge rate limits, abuse controls, and usage alerts have not been verified.
 
-The Agent backend needs its own isolated Worker/service and its own authentication, model configuration, and persistent conversation/knowledge storage. Do not create or bind these resources until the implementation plan specifies the exact service and bindings. Do not put model/API credentials in Android or repository files.
+## Security requirements
 
-## Verified versus pending
+The login-free mobile endpoint is public. Do not deploy it for production use until Cloudflare edge rate limiting, request controls, and usage alerts are configured and verified. Never put GitHub or model credentials in Android code, APK assets, or repository files. The user must not be asked to enter tokens or sign in for this Agent feature.
 
-- [x] Check open PRs and feature branches for duplicate Agent/Knowledge Hunting scope.
-- [x] Check Cloudflare Worker, D1, and Durable Object namespace inventory for existing resources.
-- [x] Verify latest Android Agent scaffold build workflow.
-- [ ] Implement backend service in the existing Agent Runtime scope.
-- [ ] Configure authenticated model access and isolated persistent storage.
-- [ ] Add tests for auth, tool allow-listing, bounded input/output, and approval behavior.
-- [ ] Deploy and verify endpoint only after configuration is secure.
+## Evidence
+
+The previous CI run #22 passed Android debug APK assembly and backend TypeScript typecheck for commit `c0288c8b4a9b16027ba7af107ea3a1cb416c14a8`. That evidence applies only to that earlier commit; rerun CI after these changes before treating the new code as build-verified.
