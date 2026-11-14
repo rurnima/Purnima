@@ -1,3 +1,6 @@
+interface D1Statement { bind(...values: unknown[]): D1Statement; run(): Promise<unknown>; first<T>(): Promise<T | null>; }
+interface D1Database { prepare(query: string): D1Statement; }
+
 export interface Env {
   DB: D1Database;
   AUTH_PRIVATE_KEY_PKCS8: string;
