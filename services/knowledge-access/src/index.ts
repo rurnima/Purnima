@@ -77,7 +77,7 @@ async function authenticate(request: Request, env: Env): Promise<AuthenticatedUs
     if (typeof claims.nbf === "number" && claims.nbf > now) return null;
     if (typeof claims.sub !== "string" || !claims.sub.trim()) return null;
 
-    const jwksResponse = await env.AUTH.fetch(new Request("https://purnima-auth/.well-known/jwks.json", {
+    const jwksResponse = await env.AUTH.fetch(new Request(`${AUTH_ISSUER}/.well-known/jwks.json`, {
       headers: { accept: "application/json", "user-agent": "Purnima-Knowledge-Access/0.1" },
     }));
     if (!jwksResponse.ok) return null;
