@@ -58,10 +58,9 @@ labels, buttons, or status.
 
 ## Backend gateway checkpoint
 
-`agent-backend/` contains a Cloudflare Worker gateway for `GET /health` and authenticated
-`POST /v1/agent` requests. It validates short-lived OIDC RS256 bearer tokens against the
-configured exact issuer, audience, and JWKS endpoint; it also bounds request size and
-instruction length.
+`agent-backend/` contains a Cloudflare Worker gateway for `GET /health` and login-free
+`POST /v1/agent` requests. It bounds request size and instruction length. Because the mobile
+endpoint is public, edge rate limiting and abuse controls are required before deployment.
 
 The gateway accepts Chat/Voice requests without a user-entered bearer token and calls Cloudflare Workers AI using
 `@cf/google/gemma-4-26b-a4b-it`. For actionable requests, the model can return a structured
@@ -91,7 +90,7 @@ Chat screen, Voice screen, or build executor. The gateway is public/login-free a
 - [x] Add the injected HTTPS runtime client adapter and network permission.
 - [x] Add a dedicated Android debug-build workflow.
 - [x] Research public GitHub MCP OAuth and Cloudflare Agents MCP client options.
-- [x] Add an OIDC-authenticated, fail-closed Cloudflare Worker gateway skeleton.
+- [x] Add a login-free Cloudflare Worker gateway skeleton with bounded requests.
 - [x] Connect Workers AI and implement validated, non-executing task proposals.
 - [x] Remove user-facing login and manual token entry from the agent gateway/client.
 - [ ] Persist conversation state and sanitized audit events.
