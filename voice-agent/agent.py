@@ -21,7 +21,7 @@ async def purnima_voice_agent(ctx: agents.JobContext):
             model=os.getenv("PURNIMA_LLM_MODEL", "google/gemma-4-31b-it"),
         ),
         tts=gnani.TTS(
-            voice=os.getenv("GNANI_TTS_VOICE", "Kaveri"),
+            voice=os.getenv("GNANI_TTS_VOICE", "Nalini"),
             model="timbre-v2.5",
             language="bn-IN",
             synthesize_method="websocket",
