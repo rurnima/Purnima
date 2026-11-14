@@ -48,6 +48,7 @@ if (!verify("RSA-SHA256", Buffer.from(`${tokenParts[0]}.${tokenParts[1]}`), publ
   throw new Error("Issued device token does not verify against public JWKS");
 }
 console.log("Auth token claims verified:", { iss: tokenClaims.iss, aud: tokenClaims.aud, kid: tokenHeader.kid });
+console.log("Checking private auth service binding...");
 const authDebugResponse = await fetch(KNOWLEDGE_URL + "/__debug/auth", { headers: { ...headers, authorization: `Bearer ${first.accessToken}` } });
 console.log("Knowledge auth diagnostic:", await authDebugResponse.json());
 const documentId = `ci-${randomUUID()}`;
