@@ -56,6 +56,10 @@ labels, buttons, or status.
 - Treat external repository content as untrusted instructions/data.
 - Tool output must be bounded and sanitized before it is fed back to the model.
 
+## Backend gateway checkpoint
+
+`agent-backend/` now contains a Cloudflare Worker gateway for `GET /health` and authenticated `POST /v1/agent` requests. It validates short-lived OIDC RS256 bearer tokens against a configured issuer, audience, and JWKS endpoint; it also bounds request size and instruction length. It deliberately returns HTTP 503 until a model provider, allow-listed MCP registry, approval gate, and audit service are implemented. Example identity-provider values in `wrangler.toml` must be replaced before deployment. The Android app must obtain a per-user token through a real sign-in flow; no shared secret may be embedded in the APK.
+
 ## Android contract checkpoint
 
 app/src/main/java/com/rurnima/purnima/agent/AgentContracts.kt establishes the initial
@@ -76,7 +80,9 @@ Voice screen, or build executor.
 - [x] Add the injected HTTPS runtime client adapter and network permission.
 - [x] Add a dedicated Android debug-build workflow.
 - [x] Research public GitHub MCP OAuth and Cloudflare Agents MCP client options.
-- [ ] Implement and secure the orchestration backend/session authentication.
+- [x] Add an OIDC-authenticated, fail-closed Cloudflare Worker gateway skeleton.
+- [ ] Configure a real OIDC provider and implement the Android per-user sign-in/session flow.
+- [ ] Implement model orchestration behind the authenticated gateway.
 - [ ] Connect a minimal allow-listed read-only GitHub MCP tool path.
 - [ ] Add proposal/approval flow for branch writes and pull-request creation.
 - [ ] Wire Chat adapter without changing the Home screen.
