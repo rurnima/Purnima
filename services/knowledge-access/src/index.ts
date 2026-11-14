@@ -220,7 +220,8 @@ async function search(request: Request, env: Env, user: AuthenticatedUser): Prom
     returnMetadata: "all",
   });
 
-  const matches = (result.matches ?? []).map((match) => ({
+  const rawMatches = result.matches ?? (result as unknown as { result?: { matches?: typeof result.matches } }).result?.matches ?? [];
+  const matches = rawMatches.map((match) => ({
     id: match.id,
     score: match.score,
     metadata: match.metadata,
