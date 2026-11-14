@@ -38,13 +38,12 @@ function makeEnv(userId = "user-123") {
   const query = vi.fn(async (_vector: number[], _options: unknown) => ({
     matches: [{ id: "chunk-1", score: 0.91, metadata: { userId, content: "নমুনা তথ্য" } }],
   }));
-  const authFetch = vi.fn(async () => Response.json({ keys: [publicJwk] }));
   const env = {
     AI: { run: aiRun },
     VECTORIZE: { upsert, deleteByIds, query },
-    AUTH: { fetch: authFetch },
+
   } as unknown as Env;
-  return { env, aiRun, upsert, deleteByIds, query, authFetch };
+  return { env, aiRun, upsert, deleteByIds, query };
 }
 
 function post(path: string, body: string, bearer = token) {
@@ -61,7 +60,7 @@ function post(path: string, body: string, bearer = token) {
 describe("Purnima Knowledge Access Worker", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Authentication keys are returned by the mocked internal service binding.
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ keys: [publicJwk] })));
   });
 
   it("serves a health response without requiring user authentication", async () => {
@@ -72,10 +71,10 @@ describe("Purnima Knowledge Access Worker", () => {
   });
 
   it("rejects requests without a bearer token", async () => {
-    const { env, authFetch } = makeEnv();
+    const { env } = makeEnv();
     const response = await worker.fetch(post("/v1/knowledge/search", JSON.stringify({ query: "পরীক্ষা" }), ""), env);
     expect(response.status).toBe(401);
-    expect(authFetch).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("sends BGE-M3 input as an array and replaces obsolete document chunks", async () => {
