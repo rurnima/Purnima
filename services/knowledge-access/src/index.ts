@@ -12,9 +12,9 @@ export interface Env {
       options: { topK: number; filter: Record<string, string>; returnMetadata: "all" },
     ): Promise<{ matches?: Array<{ id: string; score?: number; metadata?: unknown }> }>;
   };
-  AUTH: {
-    fetch(input: string | Request, init?: RequestInit): Promise<Response>;
-  };
+  OIDC_ISSUER: string;
+  OIDC_JWKS_URL: string;
+  OIDC_AUDIENCE: string;
 }
 
 interface AuthenticatedUser {
@@ -40,24 +40,69 @@ const CHUNK_SIZE = 1_600;
 const CHUNK_OVERLAP = 200;
 const MAX_CHUNKS = 57;
 
-async function authenticate(request: Request, env: Env): Promise<AuthenticatedUser | null> {
-  const authorization = request.headers.get("Authorization");
-  if (!authorization?.startsWith("Bearer ")) return null;
-
-  // AUTH is a private Worker service binding. It validates the session token and
-  // returns the canonical user ID; never trust a user ID supplied by the Android client.
-  const response = await env.AUTH.fetch("https://auth.internal/v1/session/verify", {
-    method: "POST",
-    headers: { Authorization: authorization },
-  });
-  if (!response.ok) return null;
-
-  const payload = (await response.json()) as { userId?: unknown };
-  return typeof payload.userId === "string" && payload.userId.length > 0
-    ? { id: payload.userId }
-    : null;
+function decodeBase64Url(value: string): Uint8Array<ArrayBuffer> {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(new ArrayBuffer(binary.length));
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
 }
 
+function decodeJsonSegment(value: string): Record<string, unknown> {
+  return JSON.parse(new TextDecoder().decode(decodeBase64Url(value))) as Record<string, unknown>;
+}
+
+function audienceMatches(value: unknown, expected: string): boolean {
+  return typeof value === "string"
+    ? value === expected
+    : Array.isArray(value) && value.includes(expected);
+}
+
+async function authenticate(request: Request, env: Env): Promise<AuthenticatedUser | null> {
+  const authorization = request.headers.get("Authorization") ?? "";
+  const match = /^Bearer\s+(.+)$/i.exec(authorization);
+  if (!match || match[1].length > 8_192) return null;
+
+  try {
+    const parts = match[1].split(".");
+    if (parts.length !== 3) return null;
+    const header = decodeJsonSegment(parts[0]);
+    const claims = decodeJsonSegment(parts[1]);
+    if (header.alg !== "RS256" || typeof header.kid !== "string") return null;
+    if (claims.iss !== env.OIDC_ISSUER || !audienceMatches(claims.aud, env.OIDC_AUDIENCE)) return null;
+
+    const now = Math.floor(Date.now() / 1_000);
+    if (typeof claims.exp !== "number" || claims.exp <= now) return null;
+    if (typeof claims.nbf === "number" && claims.nbf > now) return null;
+    if (typeof claims.sub !== "string" || !claims.sub.trim()) return null;
+
+    const jwksResponse = await fetch(env.OIDC_JWKS_URL, { headers: { accept: "application/json" } });
+    if (!jwksResponse.ok) return null;
+    const jwks = await jwksResponse.json() as { keys?: Array<JsonWebKey & { kid?: string; alg?: string; use?: string }> };
+    const jwk = jwks.keys?.find((key) =>
+      key.kid === header.kid && (!key.alg || key.alg === "RS256") && (!key.use || key.use === "sig")
+    );
+    if (!jwk) return null;
+
+    const publicKey = await crypto.subtle.importKey(
+      "jwk",
+      jwk,
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      false,
+      ["verify"],
+    );
+    const valid = await crypto.subtle.verify(
+      "RSASSA-PKCS1-v1_5",
+      publicKey,
+      decodeBase64Url(parts[2]),
+      new TextEncoder().encode(parts.slice(0, 2).join(".")),
+    );
+    return valid ? { id: claims.sub } : null;
+  } catch {
+    return null;
+  }
+}
 function json(data: unknown, status = 200): Response {
   return Response.json(data, {
     status,
