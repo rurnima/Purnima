@@ -24,9 +24,9 @@ server = AgentServer()
 
 @server.rtc_session(agent_name="purnima-voice")
 async def purnima_voice(ctx: agents.JobContext) -> None:
-    stt_model = os.environ["PUR_NIMA_STT_MODEL"]
-    llm_model = os.environ["PUR_NIMA_LLM_MODEL"]
-    tts_model = os.environ["PUR_NIMA_TTS_MODEL"]
+    stt_model = os.environ["PURNIMA_STT_MODEL"]
+    llm_model = os.environ["PURNIMA_LLM_MODEL"]
+    tts_model = os.environ["PURNIMA_TTS_MODEL"]
 
     session = AgentSession(
         stt=inference.STT(model=stt_model),
