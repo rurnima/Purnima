@@ -10,7 +10,6 @@ binding = "AI"
 binding = "VECTORIZE"
 index_name = "purnima-knowledge-access-dev"
 
-[vars]
-OIDC_ISSUER = "https://purnima-auth.purnima.workers.dev"
-OIDC_JWKS_URL = "https://purnima-auth.purnima.workers.dev/.well-known/jwks.json"
-OIDC_AUDIENCE = "purnima-api"
+[[services]]
+binding = "AUTH"
+service = "purnima-auth"
