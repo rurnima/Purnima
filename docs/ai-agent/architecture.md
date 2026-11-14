@@ -32,8 +32,8 @@ labels, buttons, or status.
 
 1. **Chat/Voice instruction adapters** — pass the user's natural-language command and source
    (CHAT or VOICE) to the same agent entry contract.
-2. **Authenticated orchestration service** — model reasoning, planning, and tool selection
-   run behind a service boundary. API keys and GitHub tokens must never be shipped in the APK.
+2. **Server-side orchestration service** — model reasoning, planning, and tool selection
+   run behind a service boundary. The mobile user must not be asked to sign in or enter a token/API key. Provider credentials remain server-side; the public mobile endpoint must have Cloudflare edge rate limits and abuse controls before production.
 3. **Allow-listed tool registry** — each tool declares an input contract and required permission.
 4. **GitHub MCP integration** — scoped repository reads, feature branch creation, commits, CI
    inspection, and pull-request creation. Begin read-only; gate write tools separately.
@@ -63,7 +63,7 @@ labels, buttons, or status.
 configured exact issuer, audience, and JWKS endpoint; it also bounds request size and
 instruction length.
 
-The gateway now calls Cloudflare Workers AI using
+The gateway accepts Chat/Voice requests without a user-entered bearer token and calls Cloudflare Workers AI using
 `@cf/google/gemma-4-26b-a4b-it`. For actionable requests, the model can return a structured
 proposal through one declared function. The backend validates every step against a fixed
 tool/permission allow-list, caps plans at eight steps, and forces approval for all
@@ -71,10 +71,7 @@ write/code-changing operations. The response explicitly marks every step
 `not_executed`; there is no GitHub MCP client or execution path yet. Ordinary conversation
 can return a direct model response.
 
-The model is listed as available on Workers AI Free, which currently includes 10,000
-Neurons/day; higher usage may require paid billing. The Cloudflare `AI` binding must be
-enabled for the Worker. Example OIDC values in `wrangler.toml` must be replaced before
-deployment. The Android app still needs a real per-user sign-in/session provider.
+The Cloudflare `AI` binding must be enabled for the Worker. Because the endpoint is login-free, Cloudflare edge rate limiting, abuse controls, and usage alerts are mandatory before public production deployment. No model or GitHub credential belongs in the APK.
 
 ## Android contract checkpoint
 
@@ -83,12 +80,10 @@ UI-independent Kotlin contracts for Chat/Voice instructions, tool requests/resul
 agent runtime, tool execution, and approval gate.
 
 app/src/main/java/com/rurnima/purnima/agent/HttpAgentRuntime.kt is an HTTPS-only client
-adapter that accepts an injected endpoint and access-token provider. It implements the
-defined request/response envelope, but it cannot function until the backend is deployed
-and the secure login/session provider is implemented and configured.
+adapter that accepts the gateway endpoint. It does not request a user token or require a login.
 
 The Android agent is not yet connected to the deployed model endpoint, GitHub MCP server,
-Chat screen, Voice screen, or build executor.
+Chat screen, Voice screen, or build executor. The gateway is public/login-free and must not be deployed before edge rate limits and abuse controls are in place.
 
 ## Implementation sequence
 
@@ -98,7 +93,7 @@ Chat screen, Voice screen, or build executor.
 - [x] Research public GitHub MCP OAuth and Cloudflare Agents MCP client options.
 - [x] Add an OIDC-authenticated, fail-closed Cloudflare Worker gateway skeleton.
 - [x] Connect Workers AI and implement validated, non-executing task proposals.
-- [ ] Configure a real OIDC provider and implement the Android per-user sign-in/session flow.
+- [x] Remove user-facing login and manual token entry from the agent gateway/client.
 - [ ] Persist conversation state and sanitized audit events.
 - [ ] Connect a minimal allow-listed read-only GitHub MCP tool path.
 - [ ] Add proposal/approval flow for branch writes and pull-request creation.
