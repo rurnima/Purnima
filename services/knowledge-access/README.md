@@ -17,15 +17,21 @@ This service is the isolated retrieval capability for Purnima. It does not add a
 - Metadata filter index: `userId` (string), verified present.
 - Workers AI model `@cf/baai/bge-m3` was called successfully with Bengali text and returned shape `[1, 1024]`.
 
-## Bindings required before deployment
+## Deployment readiness
 
-Configure these bindings in the environment-specific Worker config:
+The Worker configuration is present in `wrangler.toml` and binds the development Vectorize index and Workers AI. The private `AUTH` service binding points to `purnima-auth`, but that trusted authentication Worker does not yet exist in the Cloudflare account. The only existing Worker is the separate Knowledge Hunting service; it must not be reused for this feature.
 
-- `AI`: Workers AI binding.
-- `VECTORIZE`: Vectorize index binding with dimensions and metric matching the selected embedding model.
-- `AUTH`: private service binding to the trusted Purnima authentication service.
+Therefore this service is intentionally **not deployed yet**. Deployment must wait until the Purnima authentication service is implemented and can validate the same short-lived bearer tokens issued to the app. Never replace the service binding with a user ID supplied by the Android client.
 
-Do not create a production index until the selected model output dimensions and distance metric have been verified against the current Cloudflare model catalog. Do not deploy with an unconfigured or public trust-based user ID header.
+## Local verification
+
+Run from this directory:
+
+- `npm install`
+- `npm run typecheck`
+- `npm test`
+
+The isolated GitHub Actions workflow runs type-checking and unit tests on PR updates. Current verified result: TypeScript check passed and all 6 unit tests passed.
 
 ## API
 
