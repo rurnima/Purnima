@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,6 +57,25 @@ fun VoiceScreen(onNavigate: (String) -> Unit = {}) {
     var microphoneEnabled by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("Tap to Talk") }
     var errorMessage by remember { mutableStateOf("") }
+    var pendingPermissionConnect by remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            pendingPermissionConnect = true
+        } else {
+            status = "Microphone permission is needed to talk"
+            errorMessage = "Allow microphone access in Android app settings."
+        }
+    }
+
+    LaunchedEffect(pendingPermissionConnect) {
+        if (pendingPermissionConnect) {
+            pendingPermissionConnect = false
+            connectToPurnima()
+        }
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -144,15 +164,6 @@ fun VoiceScreen(onNavigate: (String) -> Unit = {}) {
                 status = "Couldn't connect"
                 errorMessage = error.message?.take(180) ?: "Check your LiveKit token endpoint and agent deployment."
             }
-        }
-    }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) connectToPurnima() else {
-            status = "Microphone permission is needed to talk"
-            errorMessage = "Allow microphone access in Android app settings."
         }
     }
 
