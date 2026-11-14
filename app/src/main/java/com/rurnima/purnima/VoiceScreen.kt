@@ -38,6 +38,7 @@ import io.livekit.android.room.Room
 import io.livekit.android.token.TokenRequestOptions
 import io.livekit.android.token.TokenSource
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.util.UUID
 
