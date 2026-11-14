@@ -9,14 +9,13 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * HTTP adapter for Purnima's authenticated orchestration API.
+ * HTTPS-only client for Purnima's agent gateway.
  *
- * The service URL and token provider are injected at runtime. Credentials must come from
- * an authenticated session and must never be hard-coded into the app or logged.
+ * No user-entered token, API key, or sign-in flow is required. Provider credentials and
+ * model access stay on the server; the public gateway must be protected with edge rate limits.
  */
 class HttpAgentRuntime(
-    private val endpoint: URL,
-    private val accessTokenProvider: suspend () -> String?
+    private val endpoint: URL
 ) : AgentRuntime {
 
     override suspend fun run(instruction: AgentInstruction): AgentRunResult {
@@ -24,20 +23,12 @@ class HttpAgentRuntime(
             return AgentRunResult("The agent service must use HTTPS.")
         }
 
-        val accessToken = accessTokenProvider()
-        if (accessToken.isNullOrBlank()) {
-            return AgentRunResult("Sign in to connect Purnima's agent service.")
-        }
-
         return withContext(Dispatchers.IO) {
-            executeRequest(instruction, accessToken)
+            executeRequest(instruction)
         }
     }
 
-    private fun executeRequest(
-        instruction: AgentInstruction,
-        accessToken: String
-    ): AgentRunResult {
+    private fun executeRequest(instruction: AgentInstruction): AgentRunResult {
         val connection = (endpoint.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             connectTimeout = CONNECT_TIMEOUT_MS
@@ -45,7 +36,6 @@ class HttpAgentRuntime(
             doOutput = true
             setRequestProperty("Accept", "application/json")
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
-            setRequestProperty("Authorization", "Bearer $accessToken")
         }
 
         try {
@@ -85,7 +75,7 @@ class HttpAgentRuntime(
             val json = JSONObject(responseText)
             val toolResults = json.optJSONArray("toolResults") ?: JSONArray()
             AgentRunResult(
-                summary = json.optString("summary", "The agent completed the request."),
+                summary = json.optString("summary", "The agent received the request."),
                 toolResults = toolResults.toToolResults(),
                 awaitingUserApproval = json.optBoolean("awaitingUserApproval", false)
             )
