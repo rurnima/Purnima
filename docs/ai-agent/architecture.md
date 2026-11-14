@@ -58,7 +58,23 @@ labels, buttons, or status.
 
 ## Backend gateway checkpoint
 
-`agent-backend/` now contains a Cloudflare Worker gateway for `GET /health` and authenticated `POST /v1/agent` requests. It validates short-lived OIDC RS256 bearer tokens against a configured issuer, audience, and JWKS endpoint; it also bounds request size and instruction length. It deliberately returns HTTP 503 until a model provider, allow-listed MCP registry, approval gate, and audit service are implemented. Example identity-provider values in `wrangler.toml` must be replaced before deployment. The Android app must obtain a per-user token through a real sign-in flow; no shared secret may be embedded in the APK.
+`agent-backend/` contains a Cloudflare Worker gateway for `GET /health` and authenticated
+`POST /v1/agent` requests. It validates short-lived OIDC RS256 bearer tokens against the
+configured exact issuer, audience, and JWKS endpoint; it also bounds request size and
+instruction length.
+
+The gateway now calls Cloudflare Workers AI using
+`@cf/google/gemma-4-26b-a4b-it`. For actionable requests, the model can return a structured
+proposal through one declared function. The backend validates every step against a fixed
+tool/permission allow-list, caps plans at eight steps, and forces approval for all
+write/code-changing operations. The response explicitly marks every step
+`not_executed`; there is no GitHub MCP client or execution path yet. Ordinary conversation
+can return a direct model response.
+
+The model is listed as available on Workers AI Free, which currently includes 10,000
+Neurons/day; higher usage may require paid billing. The Cloudflare `AI` binding must be
+enabled for the Worker. Example OIDC values in `wrangler.toml` must be replaced before
+deployment. The Android app still needs a real per-user sign-in/session provider.
 
 ## Android contract checkpoint
 
@@ -68,11 +84,11 @@ agent runtime, tool execution, and approval gate.
 
 app/src/main/java/com/rurnima/purnima/agent/HttpAgentRuntime.kt is an HTTPS-only client
 adapter that accepts an injected endpoint and access-token provider. It implements the
-defined request/response envelope, but it cannot function until the orchestration backend
-and secure login/session provider are implemented and configured.
+defined request/response envelope, but it cannot function until the backend is deployed
+and the secure login/session provider is implemented and configured.
 
-The Android agent is not yet connected to a model endpoint, GitHub MCP server, Chat screen,
-Voice screen, or build executor.
+The Android agent is not yet connected to the deployed model endpoint, GitHub MCP server,
+Chat screen, Voice screen, or build executor.
 
 ## Implementation sequence
 
@@ -81,8 +97,9 @@ Voice screen, or build executor.
 - [x] Add a dedicated Android debug-build workflow.
 - [x] Research public GitHub MCP OAuth and Cloudflare Agents MCP client options.
 - [x] Add an OIDC-authenticated, fail-closed Cloudflare Worker gateway skeleton.
+- [x] Connect Workers AI and implement validated, non-executing task proposals.
 - [ ] Configure a real OIDC provider and implement the Android per-user sign-in/session flow.
-- [ ] Implement model orchestration behind the authenticated gateway.
+- [ ] Persist conversation state and sanitized audit events.
 - [ ] Connect a minimal allow-listed read-only GitHub MCP tool path.
 - [ ] Add proposal/approval flow for branch writes and pull-request creation.
 - [ ] Wire Chat adapter without changing the Home screen.
