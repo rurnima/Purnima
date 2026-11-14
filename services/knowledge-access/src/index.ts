@@ -1,6 +1,7 @@
 type VectorMetadata = Record<string, string | number>;
 
 export interface Env {
+  AUTH: { fetch(request: Request): Promise<Response> };
   AI: {
     run(model: string, input: { text: string[] }): Promise<{ data?: number[][] }>;
   };
@@ -76,9 +77,9 @@ async function authenticate(request: Request, env: Env): Promise<AuthenticatedUs
     if (typeof claims.nbf === "number" && claims.nbf > now) return null;
     if (typeof claims.sub !== "string" || !claims.sub.trim()) return null;
 
-    const jwksResponse = await fetch(`${AUTH_ISSUER}/.well-known/jwks.json`, {
-      headers: { accept: "application/json", "user-agent": "Purnima-Knowledge-Access/0.1 (+https://github.com/rurnima/Purnima)" },
-    });
+    const jwksResponse = await env.AUTH.fetch(new Request("https://auth.internal/.well-known/jwks.json", {
+      headers: { accept: "application/json" },
+    }));
     if (!jwksResponse.ok) return null;
     const jwks = await jwksResponse.json() as { keys?: Array<JsonWebKey & { kid?: string; alg?: string; use?: string }> };
     const jwk = jwks.keys?.find((key) =>
