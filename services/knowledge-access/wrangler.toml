@@ -10,6 +10,3 @@ binding = "AI"
 binding = "VECTORIZE"
 index_name = "purnima-knowledge-access-dev"
 
-[[services]]
-binding = "AUTH"
-service = "purnima-auth"
