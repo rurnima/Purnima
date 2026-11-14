@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import worker from "../src/index";
+import worker, { type Env } from "../src/index";
 
 const env = {
   DB: {} as never,
