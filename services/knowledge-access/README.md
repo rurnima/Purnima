@@ -7,7 +7,7 @@ This service is the isolated retrieval capability for Purnima. It does not add a
 - Cloudflare Worker endpoints: `POST /v1/knowledge/ingest` and `POST /v1/knowledge/search`.
 - Workers AI multilingual embeddings via `@cf/baai/bge-m3`.
 - Vectorize stores chunk embeddings and metadata; search is filtered by the authenticated device's canonical ID.
-- Authentication verifies short-lived RS256 bearer tokens against Purnima Device Auth's fixed issuer and audience. Its signing keys are fetched through a private Cloudflare service binding to Purnima Auth; users configure no URLs or secrets. The canonical scope is the signed `sub` claim; the client cannot choose its own tenant/user ID.
+- Authentication verifies short-lived RS256 bearer tokens against Purnima Device Auth's fixed issuer and audience. Its signing keys are fetched over HTTPS from Purnima Auth's public JWKS endpoint. Cloudflare's `global_fetch_strictly_public` compatibility flag permits this Worker-to-Worker public request; users configure no URLs or secrets. The canonical scope is the signed `sub` claim; the client cannot choose its own tenant/user ID.
 - Chunking is bounded; ingestion reports accepted indexing work and callers must allow for Vectorize's eventual query visibility.
 
 ## Development resources provisioned
@@ -19,8 +19,8 @@ This service is the isolated retrieval capability for Purnima. It does not add a
 
 ## Authentication integration
 
-The issuer and audience are fixed in the service code; the signing key endpoint is accessed through an internal service binding:
-- Internal binding: `AUTH -> purnima-auth`
+The issuer and audience are fixed in the service code; the public signing key endpoint is fixed in the service code:
+- JWKS: `https://purnima-auth.purnima.workers.dev/.well-known/jwks.json`
 - Issuer: `https://purnima-auth.purnima.workers.dev`
 - Audience: `purnima-api`
 
