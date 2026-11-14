@@ -1,49 +1,50 @@
 package com.rurnima.purnima
 
-import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
+import kotlin.random.Random
 
-private val Night = Color(0xFF080610)
-private val Violet = Color(0xFF9B5CFF)
-private val SoftViolet = Color(0xFF6E35C8)
-private val Muted = Color(0xFFAAA2C0)
+private val Night = Color(0xFF05020D)
+private val Violet = Color(0xFFB52CFF)
+private val Glow = Color(0xFF8A20FF)
+private val Muted = Color(0xFFD8D0F0)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                Surface(modifier = Modifier.fillMaxSize(), color = Night) {
+                Surface(Modifier.fillMaxSize(), color = Night) {
                     PurnimaHomeScreen()
                 }
             }
@@ -53,164 +54,214 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun PurnimaHomeScreen() {
-    Column(
-        modifier = Modifier
+    Box(
+        Modifier
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(Color(0xFF10091F), Night, Color(0xFF05040A))
+                    listOf(Color(0xFF100022), Color(0xFF05020D), Color(0xFF090014))
                 )
             )
-            .padding(horizontal = 20.dp, vertical = 18.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+        CosmicBackdrop(Modifier.fillMaxSize())
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(72.dp)
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.purnima_avatar),
+                    contentDescription = "Purnima",
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier
+                        .size(54.dp)
+                        .clip(CircleShape)
+                        .border(1.5.dp, Violet, CircleShape)
+                        .shadow(12.dp, CircleShape, ambientColor = Violet, spotColor = Violet)
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    "Purnima",
+                    color = Color.White,
+                    fontSize = 30.sp,
+                    fontStyle = FontStyle.Italic,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
             Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .shadow(12.dp, CircleShape, ambientColor = Violet, spotColor = Violet)
-                    .background(
-                        Brush.radialGradient(listOf(Color(0xFFBE8BFF), SoftViolet, Color(0xFF24103F))),
-                        CircleShape
-                    )
-                    .border(1.dp, Color(0xFFB98BFF), CircleShape),
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                Text("✦", color = Color.White, fontSize = 22.sp)
-            }
-            Spacer(Modifier.width(12.dp))
-            Column {
-                Text("Purnima", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                Text("YOUR AI COMPANION", color = Muted, fontSize = 9.sp, letterSpacing = 2.sp)
-            }
-            Spacer(Modifier.weight(1f))
-        }
-
-        Spacer(Modifier.height(22.dp))
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .border(
-                    width = 1.dp,
-                    brush = Brush.verticalGradient(listOf(Color(0xFF6D42A5), Color(0x332D1B49))),
-                    shape = RoundedCornerShape(28.dp)
+                ParticleOrb(
+                    Modifier
+                        .fillMaxWidth(0.88f)
+                        .aspectRatio(1f)
                 )
-                .background(
-                    Brush.verticalGradient(listOf(Color(0x241C1231), Color(0x08080610))),
-                    RoundedCornerShape(28.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier.size(270.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    OrbAnimationVideo(
-                        modifier = Modifier
-                            .size(270.dp)
-                            .align(Alignment.Center)
-                    )
-                    Image(
-                        painter = painterResource(id = R.drawable.purnima_avatar),
-                        contentDescription = "Purnima avatar",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(204.dp)
-                            .clip(CircleShape)
-                            .border(2.dp, Color(0xFFB98BFF), CircleShape)
-                            .shadow(18.dp, CircleShape, ambientColor = Violet, spotColor = Violet)
-                    )
-                }
-                Spacer(Modifier.height(28.dp))
-                Text("Hello, I'm Purnima", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "I'm here whenever you need me",
-                    color = Muted,
-                    fontSize = 13.sp
-                )
-                Spacer(Modifier.height(30.dp))
-                Box(
-                    modifier = Modifier
-                        .border(1.dp, Color(0xFF6E42A0), RoundedCornerShape(50.dp))
-                        .background(Color(0x221B0F30), RoundedCornerShape(50.dp))
-                        .padding(horizontal = 20.dp, vertical = 10.dp)
-                ) {
-                    Text("✦  TAP TO START A CONVERSATION", color = Color(0xFFD7BFFF), fontSize = 10.sp, letterSpacing = 1.sp)
-                }
             }
-        }
 
-        Spacer(Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, Color(0xFF35234F), RoundedCornerShape(22.dp))
-                .background(Color(0xFF100B1B), RoundedCornerShape(22.dp))
-                .padding(vertical = 13.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            BottomNavItem("⌂", "Home", true)
-            BottomNavItem("◌", "Chat", false)
-            BottomNavItem("◎", "Voice", false)
-            BottomNavItem("◷", "History", false)
-            BottomNavItem("⚙", "Settings", false)
+            BottomNavigationBar()
         }
     }
 }
 
 @Composable
-private fun OrbAnimationVideo(modifier: Modifier = Modifier) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val player = remember(context) {
-        ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(Uri.parse("asset:///purnima_orb_transparent.webm")))
-            repeatMode = Player.REPEAT_MODE_ONE
-            playWhenReady = true
-            prepare()
+private fun ParticleOrb(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "orb")
+    val pulse = transition.animateFloat(
+        initialValue = 0.94f,
+        targetValue = 1.04f,
+        animationSpec = infiniteRepeatable(tween(2200), RepeatMode.Reverse),
+        label = "orbPulse"
+    )
+    val twinkle = transition.animateFloat(
+        initialValue = 0.55f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1300), RepeatMode.Reverse),
+        label = "twinkle"
+    )
+    val points = remember {
+        val random = Random(27)
+        List(720) {
+            val angle = random.nextFloat() * (Math.PI * 2).toFloat()
+            val radius = kotlin.math.sqrt(random.nextFloat()) * 0.47f
+            Triple(
+                0.5f + kotlin.math.cos(angle) * radius,
+                0.5f + kotlin.math.sin(angle) * radius,
+                random.nextFloat()
+            )
         }
     }
-
-    DisposableEffect(player) {
-        onDispose { player.release() }
-    }
-
-    AndroidView(
-        modifier = modifier,
-        factory = { viewContext ->
-            PlayerView(viewContext).apply {
-                useController = false
-                setUseTextureView(true)
-                setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
-                setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                this.player = player
+    Canvas(modifier) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val radius = size.minDimension * 0.47f * pulse.value
+        // Soft luminous sphere edge and inner glow
+        drawCircle(
+            Brush.radialGradient(
+                listOf(Color(0x222D00FF), Color(0x11090020), Color.Transparent),
+                center,
+                radius * 1.18f
+            ),
+            radius = radius * 1.18f,
+            center = center
+        )
+        drawCircle(
+            color = Color(0x663D16FF),
+            radius = radius,
+            center = center,
+            style = Stroke(width = size.minDimension * 0.004f)
+        )
+        points.forEach { (x, y, sparkle) ->
+            val point = Offset(
+                center.x + (x - 0.5f) * 2f * radius,
+                center.y + (y - 0.5f) * 2f * radius
+            )
+            val distance = (point - center).getDistance()
+            if (distance <= radius) {
+                val depthAlpha = (1f - distance / radius) * 0.35f + 0.48f
+                val dotRadius = size.minDimension * (0.002f + sparkle * 0.0042f)
+                drawCircle(
+                    color = Color(0xFFE9D8FF).copy(alpha = (depthAlpha * twinkle.value).coerceIn(0.15f, 1f)),
+                    radius = dotRadius,
+                    center = point
+                )
+                if (sparkle > 0.92f) {
+                    drawCircle(
+                        color = Violet.copy(alpha = 0.8f),
+                        radius = dotRadius * 2.3f,
+                        center = point
+                    )
+                }
             }
-        },
-        update = { it.player = player }
-    )
+        }
+        // Violet orbit trails around the particle globe
+        drawArc(
+            color = Violet.copy(alpha = 0.72f),
+            startAngle = 18f,
+            sweepAngle = 142f,
+            useCenter = false,
+            topLeft = Offset(center.x - radius * 1.12f, center.y - radius * 0.72f),
+            size = androidx.compose.ui.geometry.Size(radius * 2.24f, radius * 1.44f),
+            style = Stroke(width = size.minDimension * 0.008f)
+        )
+        drawArc(
+            color = Color(0xFF5D00FF).copy(alpha = 0.8f),
+            startAngle = 198f,
+            sweepAngle = 148f,
+            useCenter = false,
+            topLeft = Offset(center.x - radius * 1.16f, center.y - radius * 0.42f),
+            size = androidx.compose.ui.geometry.Size(radius * 2.32f, radius * 0.84f),
+            style = Stroke(width = size.minDimension * 0.006f)
+        )
+    }
+}
+
+@Composable
+private fun CosmicBackdrop(modifier: Modifier = Modifier) {
+    val stars = remember {
+        val random = Random(11)
+        List(100) { Offset(random.nextFloat(), random.nextFloat()) to random.nextFloat() }
+    }
+    Canvas(modifier) {
+        stars.forEach { (position, brightness) ->
+            drawCircle(
+                Color(0xFFBDA4FF).copy(alpha = 0.15f + brightness * 0.55f),
+                radius = 0.6f + brightness * 1.5f,
+                center = Offset(position.x * size.width, position.y * size.height)
+            )
+        }
+    }
+}
+
+@Composable
+private fun BottomNavigationBar() {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(66.dp)
+            .border(1.dp, Color(0xFF6F24C8), androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+            .background(Color(0xE6090314), androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+            .padding(horizontal = 2.dp, vertical = 5.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        BottomNavItem("⌂", "Home", true)
+        BottomNavItem("▢", "Chat", false)
+        BottomNavItem("♩", "Voice", false)
+        BottomNavItem("◴", "History", false)
+        BottomNavItem("⚙", "Settings", false)
+    }
 }
 
 @Composable
 private fun BottomNavItem(symbol: String, label: String, selected: Boolean) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        Modifier
+            .weight(1f)
+            .fillMaxHeight()
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+            .background(if (selected) Color(0x663D0878) else Color.Transparent),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
         Text(
             symbol,
-            color = if (selected) Color(0xFFC69AFF) else Muted,
-            fontSize = 22.sp,
+            color = if (selected) Color(0xFFE6BFFF) else Muted,
+            fontSize = 23.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
         )
-        Spacer(Modifier.height(4.dp))
         Text(
             label,
-            color = if (selected) Color(0xFFC69AFF) else Muted,
+            color = if (selected) Color(0xFFE6BFFF) else Muted,
             fontSize = 10.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
         )
