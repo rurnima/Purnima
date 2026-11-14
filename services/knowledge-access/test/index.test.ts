@@ -41,9 +41,7 @@ function makeEnv(userId = "user-123") {
   const env = {
     AI: { run: aiRun },
     VECTORIZE: { upsert, deleteByIds, query },
-    OIDC_ISSUER: "https://issuer.test/",
-    OIDC_JWKS_URL: "https://issuer.test/.well-known/jwks.json",
-    OIDC_AUDIENCE: "purnima-api",
+    AUTH: { fetch: vi.fn(async () => Response.json({ keys: [publicJwk] })) },
   } as unknown as Env;
   return { env, aiRun, upsert, deleteByIds, query };
 }
@@ -62,7 +60,7 @@ function post(path: string, body: string, bearer = token) {
 describe("Purnima Knowledge Access Worker", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ keys: [publicJwk] })));
+    // Authentication keys are returned by the mocked internal service binding.
   });
 
   it("serves a health response without requiring user authentication", async () => {
