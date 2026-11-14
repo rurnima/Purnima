@@ -15,6 +15,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
@@ -24,10 +27,10 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 class MainActivity : ComponentActivity() {
-    private var status by androidx.compose.runtime.mutableStateOf("Ready to check GitHub Releases.")
-    private var latestVersion by androidx.compose.runtime.mutableStateOf("")
-    private var apkUrl by androidx.compose.runtime.mutableStateOf("")
-    private var downloadedApk by androidx.compose.runtime.mutableStateOf<File?>(null)
+    private var status by mutableStateOf("Ready to check GitHub Releases.")
+    private var latestVersion by mutableStateOf("")
+    private var apkUrl by mutableStateOf("")
+    private var downloadedApk by mutableStateOf<File?>(null)
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
