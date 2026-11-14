@@ -11,6 +11,9 @@ This service provides silent, per-installation authentication. It does not show 
 
 No long-lived bearer token is stored in the Android app. It can request another short-lived token by signing a fresh challenge.
 
+## Automatic signing-key provisioning
+On the first JWKS or token request, the Worker generates an RSA-2048 signing key pair automatically. It persists the PKCS#8 private key and public JWK in the dedicated D1 `auth_keys` table; the key is never placed in source code, app preferences, or a user-facing setup screen. D1 provides encryption at rest and the Worker is the only application component bound to this database. The key ID is stable across deployments.
+
 ## API
 - POST /v1/device/register — JSON public P-256 JWK
 - POST /v1/device/challenge — JSON deviceId
@@ -23,5 +26,5 @@ The signature is over deviceId.challenge.timestamp. Challenges are single-use an
 ## Identity boundary
 This is a device identity, not an email/phone/Google account. A new installation creates a new isolated identity; reinstalling the app or changing devices does not automatically recover the old device identity. Account recovery and multi-device linking require a separate product decision. No login credentials or user-supplied secrets are required for this device-bound flow.
 
-## Deployment prerequisites
-The Worker requires an RS256 PKCS#8 signing key installed as a Cloudflare `secret_key` binding (non-exportable CryptoKey) and AUTH_PUBLIC_JWK as a non-secret Worker variable. Never commit the private key. The signing key must remain stable across deployments. Apply migrations/0001_devices.sql before deploying.
+## Deployment
+Apply migrations `0001_devices.sql` and `0002_auth_signing_key.sql`, then deploy the Worker with its D1 binding. There are no user-provided or manually pasted secrets to configure.
