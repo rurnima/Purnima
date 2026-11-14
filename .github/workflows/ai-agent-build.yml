@@ -1,0 +1,31 @@
+name: AI Agent Android Build
+
+on:
+  pull_request:
+    branches:
+      - feature/app-project
+  push:
+    branches:
+      - feature/ai-agent-runtime
+
+permissions:
+  contents: read
+
+jobs:
+  assemble-debug:
+    name: Assemble debug APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build debug APK
+        run: gradle --no-daemon assembleDebug
