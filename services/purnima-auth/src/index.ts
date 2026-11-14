@@ -3,7 +3,7 @@ interface D1Database { prepare(query: string): D1Statement; }
 
 export interface Env {
   DB: D1Database;
-  AUTH_PRIVATE_KEY_PKCS8: string;
+  AUTH_SIGNING_KEY: CryptoKey;
   AUTH_PUBLIC_JWK: string;
   AUTH_KEY_ID: string;
 }
@@ -33,9 +33,7 @@ async function issueToken(deviceId: string, issuer: string, env: Env): Promise<s
   const header = encodeJson({ alg: "RS256", typ: "JWT", kid: env.AUTH_KEY_ID });
   const payload = encodeJson({ iss: issuer, aud: AUDIENCE, sub: deviceId, iat: now, exp: now + TOKEN_TTL_SECONDS });
   const unsigned = header + "." + payload;
-  const privateKey = await crypto.subtle.importKey("pkcs8", decodeBase64Url(env.AUTH_PRIVATE_KEY_PKCS8),
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
-  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", privateKey, new TextEncoder().encode(unsigned));
+  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", env.AUTH_SIGNING_KEY, new TextEncoder().encode(unsigned));
   return unsigned + "." + base64Url(new Uint8Array(signature));
 }
 async function register(request: Request, env: Env): Promise<Response> {
