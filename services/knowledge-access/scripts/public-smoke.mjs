@@ -63,7 +63,7 @@ const ingested = await post(KNOWLEDGE_URL, "/v1/knowledge/ingest", {
 console.log("Ingestion result:", ingested.status, ingested.data);
 if (ingested.status !== 202 || ingested.data.status !== "indexed") throw new Error(`Authenticated knowledge ingestion failed: HTTP ${ingested.status} ${JSON.stringify(ingested.data)}`);
 
-console.log("Checking live search embedding and metadata filter.");
+console.log("Checking live search embedding and metadata filter; comparing vector sample.");
 let found = false;
 for (let attempt = 0; attempt < 10; attempt += 1) {
   const searched = await post(KNOWLEDGE_URL, "/v1/knowledge/search", { query: uniqueText, limit: 6 }, first.accessToken);
