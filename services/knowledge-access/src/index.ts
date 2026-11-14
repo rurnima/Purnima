@@ -12,9 +12,7 @@ export interface Env {
       options: { topK: number; filter: Record<string, string>; returnMetadata: "all" },
     ): Promise<{ matches?: Array<{ id: string; score?: number; metadata?: unknown }> }>;
   };
-  OIDC_ISSUER: string;
-  OIDC_JWKS_URL: string;
-  OIDC_AUDIENCE: string;
+  AUTH: { fetch(request: Request): Promise<Response> };
 }
 
 interface AuthenticatedUser {
@@ -32,6 +30,8 @@ interface IngestRequest {
   text: string;
 }
 
+const AUTH_ISSUER = "https://purnima-auth.purnima.workers.dev";
+const AUTH_AUDIENCE = "purnima-api";
 const EMBEDDING_MODEL = "@cf/baai/bge-m3";
 const DEFAULT_LIMIT = 6;
 const MAX_LIMIT = 12;
@@ -70,14 +70,16 @@ async function authenticate(request: Request, env: Env): Promise<AuthenticatedUs
     const header = decodeJsonSegment(parts[0]);
     const claims = decodeJsonSegment(parts[1]);
     if (header.alg !== "RS256" || typeof header.kid !== "string") return null;
-    if (claims.iss !== env.OIDC_ISSUER || !audienceMatches(claims.aud, env.OIDC_AUDIENCE)) return null;
+    if (claims.iss !== AUTH_ISSUER || !audienceMatches(claims.aud, AUTH_AUDIENCE)) return null;
 
     const now = Math.floor(Date.now() / 1_000);
     if (typeof claims.exp !== "number" || claims.exp <= now) return null;
     if (typeof claims.nbf === "number" && claims.nbf > now) return null;
     if (typeof claims.sub !== "string" || !claims.sub.trim()) return null;
 
-    const jwksResponse = await fetch(env.OIDC_JWKS_URL, { headers: { accept: "application/json" } });
+    const jwksResponse = await env.AUTH.fetch(new Request("https://purnima-auth/.well-known/jwks.json", {
+      headers: { accept: "application/json", "user-agent": "Purnima-Knowledge-Access/0.1" },
+    }));
     if (!jwksResponse.ok) return null;
     const jwks = await jwksResponse.json() as { keys?: Array<JsonWebKey & { kid?: string; alg?: string; use?: string }> };
     const jwk = jwks.keys?.find((key) =>
