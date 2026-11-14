@@ -45,8 +45,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
+                var currentScreen by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("Home") }
                 Surface(Modifier.fillMaxSize(), color = Night) {
-                    PurnimaHomeScreen()
+                    when (currentScreen) {
+                        "Voice" -> VoiceScreen(onNavigate = { destination -> currentScreen = destination })
+                        else -> PurnimaHomeScreen(onNavigate = { destination -> currentScreen = destination })
+                    }
                 }
             }
         }
@@ -54,7 +58,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun PurnimaHomeScreen() {
+private fun PurnimaHomeScreen(onNavigate: (String) -> Unit) {
     Box(
         Modifier
             .fillMaxSize()
@@ -110,7 +114,7 @@ private fun PurnimaHomeScreen() {
                 )
             }
 
-            BottomNavigationBar()
+            BottomNavigationBar(onNavigate = onNavigate, selectedScreen = "Home")
         }
     }
 }
@@ -224,7 +228,7 @@ private fun CosmicBackdrop(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun BottomNavigationBar() {
+private fun BottomNavigationBar(onNavigate: (String) -> Unit, selectedScreen: String) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -235,22 +239,23 @@ private fun BottomNavigationBar() {
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        BottomNavItem("⌂", "Home", true)
-        BottomNavItem("▢", "Chat", false)
-        BottomNavItem("♩", "Voice", false)
-        BottomNavItem("◴", "History", false)
-        BottomNavItem("⚙", "Settings", false)
+        BottomNavItem("⌂", "Home", selectedScreen == "Home") { onNavigate("Home") }
+        BottomNavItem("▢", "Chat", selectedScreen == "Chat") { onNavigate("Chat") }
+        BottomNavItem("♩", "Voice", selectedScreen == "Voice") { onNavigate("Voice") }
+        BottomNavItem("◴", "History", selectedScreen == "History") { onNavigate("History") }
+        BottomNavItem("⚙", "Settings", selectedScreen == "Settings") { onNavigate("Settings") }
     }
 }
 
 @Composable
-private fun RowScope.BottomNavItem(symbol: String, label: String, selected: Boolean) {
+private fun RowScope.BottomNavItem(symbol: String, label: String, selected: Boolean, onClick: () -> Unit) {
     Column(
         Modifier
             .weight(1f)
             .fillMaxHeight()
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
-            .background(if (selected) Color(0x663D0878) else Color.Transparent),
+            .background(if (selected) Color(0x663D0878) else Color.Transparent)
+            .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
