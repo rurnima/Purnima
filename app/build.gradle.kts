@@ -4,6 +4,13 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val liveKitTokenEndpoint = providers.gradleProperty("livekitTokenEndpoint")
+    .orElse(providers.environmentVariable("LIVEKIT_TOKEN_ENDPOINT"))
+    .getOrElse("")
+val liveKitDevTokenServerId = providers.gradleProperty("livekitDevTokenServerId")
+    .orElse(providers.environmentVariable("LIVEKIT_DEV_TOKEN_SERVER_ID"))
+    .getOrElse("")
+
 android {
     namespace = "com.rurnima.purnima"
     compileSdk = 35
@@ -14,10 +21,15 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+
+        buildConfigField("String", "LIVEKIT_TOKEN_ENDPOINT", "\"$liveKitTokenEndpoint\"")
+        buildConfigField("String", "LIVEKIT_DEV_TOKEN_SERVER_ID", "\"$liveKitDevTokenServerId\"")
+        buildConfigField("String", "LIVEKIT_AGENT_NAME", "\"purnima-voice-agent\"")
     }
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     compileOptions {
@@ -40,5 +52,6 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.media3:media3-exoplayer:1.5.1")
     implementation("androidx.media3:media3-ui:1.5.1")
+    implementation("io.livekit:livekit-android:2.30.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
