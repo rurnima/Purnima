@@ -24,4 +24,4 @@ The signature is over deviceId.challenge.timestamp. Challenges are single-use an
 This is a device identity, not an email/phone/Google account. A new installation creates a new isolated identity; reinstalling the app or changing devices does not automatically recover the old device identity. Account recovery and multi-device linking require a separate product decision. No login credentials or user-supplied secrets are required for this device-bound flow.
 
 ## Deployment prerequisites
-The Worker requires AUTH_PRIVATE_KEY_PKCS8 as a Cloudflare Worker secret and AUTH_PUBLIC_JWK as a non-secret Worker variable. Never commit the private key. The signing key must remain stable across deployments. Apply migrations/0001_devices.sql before deploying.
+The Worker requires an RS256 PKCS#8 signing key installed as a Cloudflare `secret_key` binding (non-exportable CryptoKey) and AUTH_PUBLIC_JWK as a non-secret Worker variable. Never commit the private key. The signing key must remain stable across deployments. Apply migrations/0001_devices.sql before deploying.
