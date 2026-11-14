@@ -10,9 +10,7 @@ binding = "AI"
 binding = "VECTORIZE"
 index_name = "purnima-knowledge-access-dev"
 
-# Match the OIDC issuer, JWKS endpoint, and API audience used by Agent Runtime.
-# Replace these placeholders with the selected identity provider before deployment.
 [vars]
-OIDC_ISSUER = "https://YOUR-OIDC-ISSUER/"
-OIDC_JWKS_URL = "https://YOUR-OIDC-ISSUER/.well-known/jwks.json"
+OIDC_ISSUER = "https://purnima-auth.purnima.workers.dev"
+OIDC_JWKS_URL = "https://purnima-auth.purnima.workers.dev/.well-known/jwks.json"
 OIDC_AUDIENCE = "purnima-api"
