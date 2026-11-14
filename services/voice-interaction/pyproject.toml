@@ -1,0 +1,12 @@
+[project]
+name = "purnima-voice-interaction"
+version = "0.1.0"
+description = "LiveKit Agents voice service for Purnima"
+requires-python = ">=3.10"
+dependencies = [
+  "livekit-agents>=1.0,<2.0",
+  "python-dotenv>=1.0,<2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
