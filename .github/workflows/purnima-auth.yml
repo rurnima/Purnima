@@ -6,14 +6,16 @@ on:
       - feature/app-project
     paths:
       - "services/purnima-auth/**"
+      - "app/**"
       - ".github/workflows/purnima-auth.yml"
+      - "build.gradle.kts"
 
 permissions:
   contents: read
 
 jobs:
   worker-checks:
-    name: Typecheck and unit tests
+    name: Worker typecheck and unit tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -25,11 +27,27 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: services/purnima-auth/package.json
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Typecheck
         run: npm run typecheck
       - name: Unit tests
         run: npm test
+
+  android-build:
+    name: Android debug build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Build Android app
+        run: gradle :app:assembleDebug
