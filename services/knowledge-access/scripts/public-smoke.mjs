@@ -51,6 +51,7 @@ if (!verify("RSA-SHA256", Buffer.from(`${tokenParts[0]}.${tokenParts[1]}`), publ
 console.log("Auth token claims verified:", { iss: tokenClaims.iss, aud: tokenClaims.aud, kid: tokenHeader.kid });
 const jwksDebug = await fetch(KNOWLEDGE_URL + "/__debug/jwks", { headers });
 console.log("Worker JWKS fetch diagnostic:", await jwksDebug.json());
+console.log("Checking strict JWT verifier conditions on the live Worker.");
 const tokenDebug = await fetch(KNOWLEDGE_URL + "/__debug/auth", { headers: { ...headers, authorization: `Bearer ${first.accessToken}` } });
 console.log("Worker token verification diagnostic:", await tokenDebug.json());
 const documentId = `ci-${randomUUID()}`;
